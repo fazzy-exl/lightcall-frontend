@@ -1,0 +1,152 @@
+<!-- VERSION TEST 123 -->
+
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LightCall</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+<!-- PAGE 1 : MENU PRINCIPAL -->
+    <div id="page-menu" class="page active">
+
+        <div id="sidebar">
+            <h1 class="menu-title">LightCall</h1>
+
+            <div class="menu-container">
+
+                <div class="menu-column">
+                    <h2>Serveurs</h2>
+                    <div id="server-list" class="menu-list"></div>
+                    <button id="server-plus-btn">+</button>
+                    <div id="server-plus-menu" class="hidden">
+                        <div class="menu-item" id="open-create-server">Créer un serveur</div>
+                        <div class="menu-item" id="open-join-server">Rejoindre un serveur</div>
+                    </div>
+                </div>
+
+                <div class="menu-column">
+                    <h2>Messages Privés</h2>
+                    <div id="dm-list" class="menu-list">
+                        <div class="menu-empty">Aucun ami pour le moment</div>
+                    </div>
+                </div>
+
+            </div>
+
+            <div id="sidebar-footer">
+                <div id="settings-btn">⚙️ Paramètres</div>
+            </div>
+        </div>
+
+        <div id="sidebar-resizer"></div>
+
+        <div id="content">
+            <!-- Ici tu mets toutes tes pages -->
+            <!-- PAGE 3 : PAGE DÉDIÉE À UN SERVEUR -->
+            <div id="page-server-view" class="page">
+
+                <h1 id="server-view-title">Serveur</h1>
+
+                <div class="server-container">
+
+                    <!-- Salons textuels -->
+                    <div class="server-column">
+                        <h2>Salons textuels</h2>
+                        <div id="text-channels" class="server-list">
+                            <div class="server-empty">Aucun salon textuel</div>
+                        </div>
+                    </div>
+
+                    <!-- Salons vocaux -->
+                    <div class="server-column">
+                        <h2>Salons vocaux</h2>
+                        <div id="voice-channels" class="server-list">
+
+                            <!-- Liste dynamique des salons vocaux -->
+                            <div id="voice-channel-list"></div>
+
+                        </div>
+
+                    </div>
+
+                </div>
+
+                <button class="back-btn" onclick="showPage('page-menu')">Retour</button>
+
+            </div>
+
+            <!-- PAGE 4 : TON ÉCRAN D’APPEL ACTUEL -->
+            <div id="page-call" class="page">
+                <div id="app">
+                    <h1>LightCall – Gaming Server</h1>
+
+                    <div id="videos"></div>
+
+                    <div id="controls">
+                        <button id="joinBtn">Rejoindre</button>
+                        <button id="toggleCamBtn">Caméra ON/OFF</button>
+                        <button id="toggleMicBtn">Micro ON/OFF</button>
+                        <button id="shareBtn">Partager</button>
+                    </div>
+
+                    <button onclick="showPage('page-menu')">Quitter l’appel</button>
+                </div>
+            </div>
+
+            <!-- etc. -->
+        </div>
+
+    </div>
+
+    <!-- POPUP : CRÉER UN SERVEUR -->
+    <div id="create-server-popup" class="popup hidden">
+        <div class="popup-content">
+            <h2>Créer un serveur</h2>
+
+            <input type="text" id="server-name-input" placeholder="Nom du serveur">
+
+            <div class="popup-buttons">
+                <button id="confirm-create-server" class="special-btn">Créer</button>
+                <button id="cancel-create-server" class="special-btn cancel">Annuler</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showPage(id) {
+            document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+            document.getElementById(id).classList.add('active');
+        }
+
+    </script>
+
+    <div id="server-context-menu" class="hidden">
+        <div id="rename-server-option">Renommer serveur</div>
+        <div id="delete-server-option">Supprimer serveur</div>
+    </div>
+
+    <div id="delete-server-confirm" class="hidden">
+        <div class="confirm-box">
+            <p id="delete-server-text"></p>
+            <button id="confirm-delete-server">Supprimer</button>
+            <button id="cancel-delete-server">Annuler</button>
+        </div>
+    </div>
+
+    <div id="rename-server-popup" class="hidden">
+        <div class="confirm-box">
+            <p>Nouveau nom du serveur :</p>
+            <input type="text" id="rename-server-input">
+            <button id="confirm-rename-server">Renommer</button>
+            <button id="cancel-rename-server">Annuler</button>
+        </div>
+    </div>
+
+<script src="script.js"></script>
+
+</body>
+</html>
