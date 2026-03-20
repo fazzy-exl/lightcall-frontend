@@ -18,7 +18,7 @@ window.onpopstate = () => {
     loadServers();
 };
 
-// Affichage des pages internes (uniquement pour index.html)
+// Affichage des pages internes
 function showPage(id) {
     document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
     document.getElementById(id).classList.add('active');
@@ -52,7 +52,7 @@ function loadServers() {
 }
 
 // -------------------------------
-// 2) Gestion du clic droit (supprimer serveur)
+// 2) Gestion du clic droit (supprimer / renommer serveur)
 // -------------------------------
 let selectedServerId = null;
 let selectedServerName = null;
@@ -79,46 +79,11 @@ document.addEventListener("click", () => {
     contextMenu.classList.add("hidden");
 });
 
+// Supprimer serveur
 document.getElementById("delete-server-option").onclick = () => {
     contextMenu.classList.add("hidden");
     deleteText.textContent = `Supprimer le serveur "${selectedServerName}" ?`;
     deleteConfirm.classList.remove("hidden");
-};
-
-// -------------------------------
-// Renommer serveur
-// -------------------------------
-document.getElementById("rename-server-option").onclick = () => {
-    contextMenu.classList.add("hidden");
-
-    // Pré-remplir avec l'ancien nom
-    document.getElementById("rename-server-input").value = selectedServerName;
-
-    document.getElementById("rename-server-popup").classList.remove("hidden");
-};
-
-// Annuler
-document.getElementById("cancel-rename-server").onclick = () => {
-    document.getElementById("rename-server-popup").classList.add("hidden");
-};
-
-// Confirmer
-document.getElementById("confirm-rename-server").onclick = () => {
-    const newName = document.getElementById("rename-server-input").value.trim();
-    if (!newName) return alert("Entre un nom valide !");
-
-    fetch(`https://lightcall-backend.onrender.com/servers/${selectedServerId}/rename`, {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ new_name: newName })
-    })
-        .then(res => res.json())
-        .then(data => {
-            if (data.error) return alert(data.error);
-
-            document.getElementById("rename-server-popup").classList.add("hidden");
-            loadServers(); // recharge la liste
-        });
 };
 
 document.getElementById("cancel-delete-server").onclick = () => {
@@ -136,8 +101,37 @@ document.getElementById("confirm-delete-server").onclick = () => {
         });
 };
 
+// Renommer serveur
+document.getElementById("rename-server-option").onclick = () => {
+    contextMenu.classList.add("hidden");
+    document.getElementById("rename-server-input").value = selectedServerName;
+    document.getElementById("rename-server-popup").classList.remove("hidden");
+};
+
+document.getElementById("cancel-rename-server").onclick = () => {
+    document.getElementById("rename-server-popup").classList.add("hidden");
+};
+
+document.getElementById("confirm-rename-server").onclick = () => {
+    const newName = document.getElementById("rename-server-input").value.trim();
+    if (!newName) return alert("Entre un nom valide !");
+
+    fetch(`https://lightcall-backend.onrender.com/servers/${selectedServerId}/rename`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_name: newName })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) return alert(data.error);
+
+            document.getElementById("rename-server-popup").classList.add("hidden");
+            loadServers();
+        });
+};
+
 // -------------------------------
-// 3) Popup
+// 3) POPUPS (Créer + Rejoindre)
 // -------------------------------
 document.addEventListener("DOMContentLoaded", () => {
 
@@ -153,6 +147,7 @@ document.addEventListener("DOMContentLoaded", () => {
     document.getElementById("confirm-create-server").onclick = () => {
         const name = document.getElementById("server-name-input").value.trim();
         if (!name) return alert("Entre un nom de serveur !");
+
         fetch("https://lightcall-backend.onrender.com/servers/create", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
@@ -169,48 +164,44 @@ document.addEventListener("DOMContentLoaded", () => {
     };
 
     // --- Rejoindre un serveur ---
-    document.addEventListener("DOMContentLoaded", () => {
+    document.getElementById("open-join-server").onclick = () => {
+        document.getElementById("join-server-popup").classList.remove("hidden");
+    };
 
-        document.getElementById("open-join-server").onclick = () => {
-            document.getElementById("join-server-popup").classList.remove("hidden");
-        };
+    document.getElementById("cancel-join-server").onclick = () => {
+        document.getElementById("join-server-popup").classList.add("hidden");
+    };
 
-        document.getElementById("cancel-join-server").onclick = () => {
-            document.getElementById("join-server-popup").classList.add("hidden");
-        };
+    document.getElementById("confirm-join-server").onclick = () => {
+        const code = document.getElementById("join-server-input").value.trim();
+        if (!code) return alert("Entre un code d'invitation !");
 
-        document.getElementById("confirm-join-server").onclick = () => {
-            const code = document.getElementById("join-server-input").value.trim();
-            if (!code) return alert("Entre un code d'invitation !");
-
-            fetch("https://lightcall-backend.onrender.com/servers/join-by-code", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    invite_code: code,
-                    user_id: currentUserId
-                })
+        fetch("https://lightcall-backend.onrender.com/servers/join-by-code", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({
+                invite_code: code,
+                user_id: currentUserId
             })
-                .then(res => res.json())
-                .then(data => {
-                    if (data.error) {
-                        alert(data.error);
-                    } else {
-                        alert("Tu as rejoint : " + data.server_name);
-                        window.location.href = `server.html?id=${data.server_id}`;
-                    }
-                });
+        })
+            .then(res => res.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    alert("Tu as rejoint : " + data.server_name);
+                    window.location.href = `server.html?id=${data.server_id}`;
+                }
+            });
 
-            document.getElementById("join-server-popup").classList.add("hidden");
-            document.getElementById("join-server-input").value = "";
-        };
-
-    });
+        document.getElementById("join-server-popup").classList.add("hidden");
+        document.getElementById("join-server-input").value = "";
+    };
 
 });
 
 // -------------------------------
-// 5) Redimensionnement du sidebar
+// 4) Redimensionnement du sidebar
 // -------------------------------
 const sidebar = document.getElementById("sidebar");
 const resizer = document.getElementById("sidebar-resizer");
@@ -239,7 +230,7 @@ document.addEventListener("mouseup", () => {
 });
 
 // -------------------------------
-// 6) Menu +
+// 5) Menu +
 // -------------------------------
 const plusBtn = document.getElementById("server-plus-btn");
 const plusMenu = document.getElementById("server-plus-menu");
