@@ -116,7 +116,21 @@
         </div>
     </div>
 
-    <script>
+    <!-- POPUP : REJOINDRE UN SERVEUR -->
+    <div id="join-server-popup" class="popup hidden">
+        <div class="popup-content">
+            <h2>Rejoindre un serveur</h2>
+
+            <input id="join-server-input" type="text" placeholder="Code d'invitation">
+
+            <div class="popup-buttons">
+                <button id="cancel-join-server">Annuler</button>
+                <button id="confirm-join-server">Rejoindre</button>
+            </div>
+        </div>
+    </div>
+
+<script>
         function showPage(id) {
             document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
             document.getElementById(id).classList.add('active');
