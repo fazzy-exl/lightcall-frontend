@@ -601,3 +601,40 @@ h1 {
     display: flex;
     justify-content: space-between;
 }
+
+.auth-container {
+    width: 350px;
+    margin: 100px auto;
+    background: #1e1e1e;
+    padding: 20px;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.auth-container input {
+    width: 90%;
+    padding: 10px;
+    margin: 10px 0;
+    border-radius: 6px;
+    border: none;
+}
+
+.auth-container button {
+    width: 100%;
+    padding: 10px;
+    background: #5865F2;
+    border: none;
+    border-radius: 6px;
+    color: white;
+    font-weight: bold;
+    cursor: pointer;
+}
+
+.auth-container button:hover {
+    background: #4752C4;
+}
+
+#auth-forms span {
+    color: #5865F2;
+    cursor: pointer;
+}

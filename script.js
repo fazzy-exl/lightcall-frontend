@@ -1,10 +1,10 @@
 console.log("LightCall script chargé");
 
 // Identifiant utilisateur
-let currentUserId = localStorage.getItem("userId");
+const currentUserId = localStorage.getItem("userId");
+
 if (!currentUserId) {
-    currentUserId = Math.random().toString(36).substring(2, 10);
-    localStorage.setItem("userId", currentUserId);
+    window.location.href = "login.html";
 }
 
 // Chargement initial
@@ -27,28 +27,34 @@ function showPage(id) {
 // -------------------------------
 // 1) Charger les serveurs
 // -------------------------------
-function loadServers() {
-    fetch(`https://lightcall-backend.onrender.com/servers/${currentUserId}`)
-        .then(res => res.json())
-        .then(servers => {
-            const list = document.getElementById("server-list");
-            list.innerHTML = "";
+async function loadServers() {
+    const userId = localStorage.getItem("userId");
 
-            servers.forEach(server => {
-                const btn = document.createElement("button");
-                btn.className = "menu-item server-item";
-                btn.textContent = server.name;
+    if (!userId) {
+        window.location.href = "login.html";
+        return;
+    }
 
-                btn.dataset.serverId = server.id;
-                btn.dataset.serverName = server.name;
+    const res = await fetch(`https://lightcall-backend.onrender.com/servers/${userId}`);
+    const servers = await res.json();
 
-                btn.onclick = () => {
-                    window.location.href = `server.html?id=${server.id}`;
-                };
+    const list = document.getElementById("server-list");
+    list.innerHTML = "";
 
-                list.appendChild(btn);
-            });
-        });
+    servers.forEach(server => {
+        const btn = document.createElement("button");
+        btn.className = "menu-item server-item";
+        btn.textContent = server.name;
+
+        btn.dataset.serverId = server.id;
+        btn.dataset.serverName = server.name;
+
+        btn.onclick = () => {
+            window.location.href = `server.html?id=${server.id}`;
+        };
+
+        list.appendChild(btn);
+    });
 }
 
 // -------------------------------

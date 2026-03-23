@@ -3,7 +3,7 @@ const params = new URLSearchParams(window.location.search);
 const serverId = params.get("id");
 
 // Charge les infos du serveur
-fetch(`https://lightcall-backend.onrender.com/server/${serverId}`)
+fetch(`https://lightcall-backend.onrender.com/servers/${serverId}`)
     .then(res => res.json())
     .then(server => {
         document.getElementById("server-title").textContent = server.name;

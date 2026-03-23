@@ -32,6 +32,20 @@
 
 </div>
 
+<script>
+    // Récupérer l'ID du serveur dans l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const serverId = urlParams.get("id");
+
+    if (!serverId) {
+        alert("Erreur : aucun serveur sélectionné.");
+        window.location.href = "index.html";
+    }
+
+    // Rendre l'ID accessible dans server.js
+    window.currentServerId = serverId;
+</script>
+
 <script src="server.js"></script>
 
 </body>
