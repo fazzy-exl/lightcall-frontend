@@ -130,6 +130,32 @@ document.getElementById("confirm-rename-server").onclick = () => {
         });
 };
 
+// Confirmer
+document.getElementById("confirm-rename-server").onclick = () => {
+    const newName = document.getElementById("rename-server-input").value.trim();
+    if (!newName) return alert("Entre un nom valide !");
+
+    fetch(`https://lightcall-backend.onrender.com/servers/${selectedServerId}/rename`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_name: newName })
+    })
+        .then(res => res.json())
+        .then(data => {
+            if (data.error) return alert(data.error);
+
+            document.getElementById("rename-server-popup").classList.add("hidden");
+            loadServers();
+        });
+};
+
+// ➕ Ajout : valider avec la touche Entrée
+document.getElementById("rename-server-input").addEventListener("keydown", (e) => {
+    if (e.key === "Enter") {
+        document.getElementById("confirm-rename-server").click();
+    }
+});
+
 // -------------------------------
 // 3) POPUPS (Créer + Rejoindre)
 // -------------------------------
@@ -162,6 +188,14 @@ document.addEventListener("DOMContentLoaded", () => {
         document.getElementById("create-server-popup").classList.add("hidden");
         document.getElementById("server-name-input").value = "";
     };
+
+    // ➕ Valider la création avec la touche Entrée
+    document.getElementById("server-name-input").addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+            document.getElementById("confirm-create-server").click();
+        }
+    });
+
 
     // --- Rejoindre un serveur ---
     document.getElementById("open-join-server").onclick = () => {

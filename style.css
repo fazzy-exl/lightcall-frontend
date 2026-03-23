@@ -90,6 +90,7 @@ body {
 
 /* Colonne gauche */
 #sidebar {
+    position: relative;
     padding: 20px;
     width: 350px;
     min-width: 250px;
@@ -103,7 +104,12 @@ body {
 #sidebar-resizer {
     width: 6px;
     cursor: ew-resize;
-    background: #333;
+    background: transparent;
+    position: absolute;
+    top: 0;
+    right: 0;
+    height: 100%;
+    z-index: 9999;
     user-select: none;
 }
 
@@ -566,11 +572,13 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
+    pointer-events: auto;
     z-index: 999;
 }
 
 .popup.hidden {
-    display: none;
+    display: none !important;
+    pointer-events: none !important;
 }
 
 .popup-content {

@@ -143,20 +143,24 @@
         <div id="delete-server-option">Supprimer serveur</div>
     </div>
 
-    <div id="delete-server-confirm" class="hidden">
-        <div class="confirm-box">
+    <div id="delete-server-confirm" class="popup hidden">
+        <div class="popup-content">
             <p id="delete-server-text"></p>
             <button id="confirm-delete-server">Supprimer</button>
             <button id="cancel-delete-server">Annuler</button>
         </div>
     </div>
 
-    <div id="rename-server-popup" class="hidden">
-        <div class="confirm-box">
-            <p>Nouveau nom du serveur :</p>
-            <input type="text" id="rename-server-input">
-            <button id="confirm-rename-server">Renommer</button>
-            <button id="cancel-rename-server">Annuler</button>
+    <div id="rename-server-popup" class="popup hidden">
+        <div class="popup-content">
+            <h2>Renommer le serveur</h2>
+
+            <input type="text" id="rename-server-input" placeholder="Nouveau nom">
+
+            <div class="popup-buttons">
+                <button id="confirm-rename-server">Renommer</button>
+                <button id="cancel-rename-server">Annuler</button>
+            </div>
         </div>
     </div>
 
