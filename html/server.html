@@ -1,0 +1,52 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>LightCall – Serveur</title>
+    <link rel="stylesheet" href="../css/style.css">
+</head>
+
+<body>
+
+<div id="server-page">
+
+    <button onclick="history.back()" class="back-btn">← Retour</button>
+
+    <h1 id="server-title">Chargement...</h1>
+
+    <div class="server-container">
+
+        <div class="server-column">
+            <h2>Salons textuels</h2>
+            <div id="text-channels" class="server-list"></div>
+        </div>
+
+        <div class="server-column">
+            <h2>Salons vocaux</h2>
+            <div id="voice-channels" class="server-list">
+                <div id="voice-channel-list"></div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+
+<script>
+    // Récupérer l'ID du serveur dans l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const serverId = urlParams.get("id");
+
+    if (!serverId) {
+        alert("Erreur : aucun serveur sélectionné.");
+        window.location.href = "index.html";
+    }
+
+    // Rendre l'ID accessible dans server.js
+    window.currentServerId = serverId;
+</script>
+
+<script src="../js/server.js"></script>
+
+</body>
+</html>

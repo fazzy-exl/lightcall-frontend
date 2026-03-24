@@ -1,0 +1,29 @@
+{
+  "name": "lightcall-frontend",
+  "version": "1.0.0",
+  "description": "",
+  "main": "../js/auth.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "node ../js/server.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/fazzy-exl/lightcall-frontend.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/fazzy-exl/lightcall-frontend/issues"
+  },
+  "homepage": "https://github.com/fazzy-exl/lightcall-frontend#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "cors": "^2.8.6",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "mongoose": "^9.3.2"
+  }
+}

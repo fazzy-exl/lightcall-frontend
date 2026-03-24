@@ -3,10 +3,19 @@
 <head>
     <meta charset="UTF-8">
     <title>LightCall</title>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
+
+<div id="user-icon">
+    <img id="user-avatar" src="images/Casque%20Transparent.JPEG" alt="avatar">
+    <span id="username">Fazzy_exl</span>
+    <div id="user-buttons">
+        <button class="user-btn login-btn">Login</button>
+        <button class="user-btn signup-btn">Sign Up</button>
+    </div>
+</div>
 
 <script>
     // Vérifie si l'utilisateur est connecté
@@ -154,7 +163,55 @@
     </div>
 </div>
 
-<script src="script.js"></script>
+<script src="js/script.js"></script>
+
+<div id="login-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Login</h2>
+        <input type="text" placeholder="Username">
+
+        <div class="password-wrapper">
+            <input type="password" class="password-field" placeholder="Password">
+
+            <!-- Icône œil (visible) -->
+            <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
+            </svg>
+
+            <!-- Icône œil barré (caché) -->
+            <svg class="toggle-password eye-hidden" viewBox="0 0 24 24">
+                <path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/>
+            </svg>
+        </div>
+
+        <button class="modal-btn">Submit</button>
+    </div>
+</div>
+
+<div id="signup-modal" class="modal">
+    <div class="modal-content">
+        <span class="close-modal">&times;</span>
+        <h2>Sign Up</h2>
+        <input type="text" placeholder="Username">
+
+        <div class="password-wrapper">
+            <input type="password" class="password-field" placeholder="Password">
+
+            <!-- Icône œil (visible) -->
+            <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
+                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
+            </svg>
+
+            <!-- Icône œil barré (caché) -->
+            <svg class="toggle-password eye-hidden" viewBox="0 0 24 24">
+                <path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/>
+            </svg>
+        </div>
+
+        <button class="modal-btn">Create Account</button>
+    </div>
+</div>
 
 </body>
 </html>
