@@ -2,10 +2,10 @@
   "name": "lightcall-frontend",
   "version": "1.0.0",
   "description": "",
-  "main": "../js/auth.js",
+  "main": "js/auth.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
-    "start": "node ../js/server.js"
+    "start": "node js/server.js"
   },
   "repository": {
     "type": "git",

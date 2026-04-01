@@ -14,16 +14,9 @@
     <div id="user-buttons">
         <button class="user-btn login-btn">Login</button>
         <button class="user-btn signup-btn">Sign Up</button>
+        <button id="logout-btn" class="user-btn" style="display:none; width: 150px;">Se Déconnecter</button>
     </div>
 </div>
-
-<script>
-    // Vérifie si l'utilisateur est connecté
-    const userId = localStorage.getItem("userId");
-    if (!userId) {
-        window.location.href = "login.html";
-    }
-</script>
 
 <!-- PAGE 1 : MENU PRINCIPAL -->
 <div id="page-menu" class="page active">
@@ -163,16 +156,14 @@
     </div>
 </div>
 
-<script src="js/script.js"></script>
-
 <div id="login-modal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
         <h2>Login</h2>
-        <input type="text" placeholder="Username">
+        <input id="login-username" type="text" placeholder="Username">
 
         <div class="password-wrapper">
-            <input type="password" class="password-field" placeholder="Password">
+            <input id="login-password" type="password" class="password-field" placeholder="Password">
 
             <!-- Icône œil (visible) -->
             <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
@@ -185,7 +176,10 @@
             </svg>
         </div>
 
-        <button class="modal-btn">Submit</button>
+        <p id="login-error" style="color: red; font-size: 14px; margin-top: 5px; display: none;">
+        </p>
+
+        <button id="login-submit" class="modal-btn">Submit</button>
     </div>
 </div>
 
@@ -193,10 +187,10 @@
     <div class="modal-content">
         <span class="close-modal">&times;</span>
         <h2>Sign Up</h2>
-        <input type="text" placeholder="Username">
+        <input id="signup-username" type="text" placeholder="Username">
 
         <div class="password-wrapper">
-            <input type="password" class="password-field" placeholder="Password">
+            <input id="signup-password" type="password" class="password-field" placeholder="Password">
 
             <!-- Icône œil (visible) -->
             <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
@@ -209,9 +203,11 @@
             </svg>
         </div>
 
-        <button class="modal-btn">Create Account</button>
+        <button id="signup-submit" class="modal-btn">Create Account</button>
     </div>
 </div>
+
+<script src="js/script.js"></script>
 
 </body>
 </html>
