@@ -22,9 +22,18 @@ const toggleMicBtn = document.getElementById("toggleMicBtn");
 // -------------------------------
 // 1) Rejoindre l'appel
 // -------------------------------
-joinBtn.onclick = startCall;
+joinBtn.onclick = () => {
+    if (!currentVoiceChannel) {
+        console.error("Aucun salon vocal sélectionné");
+        return;
+    }
 
-async function startCall() {
+    startCall(currentVoiceChannel);
+};
+
+async function startCall(channelId) {
+    console.log("Connexion au salon vocal :", channelId);
+
     joinBtn.disabled = true;
 
     const ok = await resetCamera();
@@ -35,6 +44,7 @@ async function startCall() {
 
     addVideoStream(localStream, userId);
 
+    // 🔥 Détection de voix pour TOI
     setTimeout(() => {
         const video = document.getElementById("video_" + userId);
         if (video) detectSpeaking(localStream, video);
@@ -42,7 +52,8 @@ async function startCall() {
 
     ws.send(JSON.stringify({
         type: "join",
-        id: userId
+        id: userId,
+        channel: channelId
     }));
 }
 
@@ -340,7 +351,7 @@ function detectSpeaking(stream, videoElement) {
                 speakingTimeout = setTimeout(() => {
                     videoElement.parentElement.classList.remove("speaking");
                     speakingTimeout = null;
-                }, 200);
+                }, 400);
             }
         }
 

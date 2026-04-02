@@ -9,7 +9,7 @@
 <body>
 
 <div id="user-icon">
-    <img id="user-avatar" src="images/Casque%20Transparent.JPEG" alt="avatar">
+    <img id="user-avatar" src="images/Casque Transparent.JPEG" alt="avatar">
     <span id="username">Fazzy_exl</span>
     <div id="user-buttons">
         <button class="user-btn login-btn">Login</button>
@@ -52,86 +52,53 @@
 
     <div id="sidebar-resizer"></div>
 
-    <div id="content">
+</div> <!-- FIN PAGE MENU -->
 
-        <!-- PAGE SERVEUR -->
-        <div id="page-server-view" class="page">
-            <h1 id="server-view-title">Serveur</h1>
+<!-- PAGE 2 : PAGE SERVEUR -->
+<div id="page-server-view" class="page">
 
-            <div class="server-container">
+    <h1 id="server-view-title">Serveur</h1>
 
-                <div class="server-column">
-                    <h2>Salons textuels</h2>
-                    <div id="text-channels" class="server-list">
-                        <div class="server-empty">Aucun salon textuel</div>
-                    </div>
-                </div>
+    <div class="server-container">
 
-                <div class="server-column">
-                    <h2>Salons vocaux</h2>
-                    <div id="voice-channels" class="server-list">
-                        <div id="voice-channel-list"></div>
-                    </div>
-                </div>
-
+        <div class="server-column">
+            <h2>Salons textuels</h2>
+            <div id="text-channels" class="server-list">
+                <div class="server-empty">Aucun salon textuel</div>
             </div>
-
-            <button class="back-btn" onclick="showPage('page-menu')">Retour</button>
         </div>
 
-        <!-- PAGE APPEL -->
-        <div id="page-call" class="page">
-            <div id="app">
-                <h1>LightCall – Gaming Server</h1>
-
-                <div id="videos"></div>
-
-                <div id="controls">
-                    <button id="joinBtn">Rejoindre</button>
-                    <button id="toggleCamBtn">Caméra ON/OFF</button>
-                    <button id="toggleMicBtn">Micro ON/OFF</button>
-                    <button id="shareBtn">Partager</button>
-                </div>
-
-                <button onclick="showPage('page-menu')">Quitter l’appel</button>
+        <div class="server-column">
+            <h2>Salons vocaux</h2>
+            <div id="voice-channels" class="server-list">
+                <div id="voice-channel-list"></div>
             </div>
         </div>
 
     </div>
 
+    <button class="back-btn" onclick="showPage('page-menu')">Retour</button>
 </div>
 
-<!-- POPUP : CRÉER UN SERVEUR -->
-<div id="create-server-popup" class="popup hidden">
-    <div class="popup-content">
-        <h2>Créer un serveur</h2>
-        <input type="text" id="server-name-input" placeholder="Nom du serveur">
-        <div class="popup-buttons">
-            <button id="confirm-create-server" class="special-btn">Créer</button>
-            <button id="cancel-create-server" class="special-btn cancel">Annuler</button>
+<!-- PAGE 3 : PAGE APPEL -->
+<div id="page-call" class="page">
+    <div id="app">
+        <h1>LightCall – Gaming Server</h1>
+
+        <div id="videos"></div>
+
+        <div id="controls">
+            <button id="joinBtn">Rejoindre</button>
+            <button id="toggleCamBtn">Caméra ON/OFF</button>
+            <button id="toggleMicBtn">Micro ON/OFF</button>
+            <button id="shareBtn">Partager</button>
         </div>
+
+        <button onclick="showPage('page-menu')">Quitter l’appel</button>
     </div>
 </div>
 
-<!-- POPUP : REJOINDRE UN SERVEUR -->
-<div id="join-server-popup" class="popup hidden">
-    <div class="popup-content">
-        <h2>Rejoindre un serveur</h2>
-        <input id="join-server-input" type="text" placeholder="Code d'invitation">
-        <div class="popup-buttons">
-            <button id="cancel-join-server">Annuler</button>
-            <button id="confirm-join-server">Rejoindre</button>
-        </div>
-    </div>
-</div>
-
-<script>
-    function showPage(id) {
-        document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-        document.getElementById(id).classList.add('active');
-    }
-</script>
-
+<!-- POPUPS & MENUS (inchangés) -->
 <div id="server-context-menu" class="hidden">
     <div id="rename-server-option">Renommer serveur</div>
     <div id="delete-server-option">Supprimer serveur</div>
@@ -156,6 +123,29 @@
     </div>
 </div>
 
+<div id="create-server-popup" class="popup hidden">
+    <div class="popup-content">
+        <h2>Créer un serveur</h2>
+        <input type="text" id="server-name-input" placeholder="Nom du serveur">
+        <div class="popup-buttons">
+            <button id="confirm-create-server" class="special-btn">Créer</button>
+            <button id="cancel-create-server" class="special-btn cancel">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<div id="join-server-popup" class="popup hidden">
+    <div class="popup-content">
+        <h2>Rejoindre un serveur</h2>
+        <input id="join-server-input" type="text" placeholder="Code d'invitation">
+        <div class="popup-buttons">
+            <button id="cancel-join-server">Annuler</button>
+            <button id="confirm-join-server">Rejoindre</button>
+        </div>
+    </div>
+</div>
+
+<!-- LOGIN / SIGNUP -->
 <div id="login-modal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
@@ -164,20 +154,15 @@
 
         <div class="password-wrapper">
             <input id="login-password" type="password" class="password-field" placeholder="Password">
-
-            <!-- Icône œil (visible) -->
             <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
             </svg>
-
-            <!-- Icône œil barré (caché) -->
             <svg class="toggle-password eye-hidden" viewBox="0 0 24 24">
                 <path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/>
             </svg>
         </div>
 
-        <p id="login-error" style="color: red; font-size: 14px; margin-top: 5px; display: none;">
-        </p>
+        <p id="login-error" style="color: red; font-size: 14px; margin-top: 5px; display: none;"></p>
 
         <button id="login-submit" class="modal-btn">Submit</button>
     </div>
@@ -191,13 +176,9 @@
 
         <div class="password-wrapper">
             <input id="signup-password" type="password" class="password-field" placeholder="Password">
-
-            <!-- Icône œil (visible) -->
             <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
                 <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
             </svg>
-
-            <!-- Icône œil barré (caché) -->
             <svg class="toggle-password eye-hidden" viewBox="0 0 24 24">
                 <path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/>
             </svg>
@@ -208,6 +189,7 @@
 </div>
 
 <script src="js/script.js"></script>
+<script src="js/call.js"></script>
 
 </body>
 </html>

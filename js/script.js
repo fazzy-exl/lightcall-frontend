@@ -1,4 +1,5 @@
 console.log("LightCall script chargé");
+let currentVoiceChannel = null;
 
 // ---------------------------------------------
 // 1) Chargement initial
@@ -594,7 +595,10 @@ function loadServer(serverId) {
                         const div = document.createElement("div");
                         div.classList.add("server-item");
                         div.textContent = `🔊 ${ch.name}`;
-                        div.onclick = () => showPage("page-call");
+                        div.onclick = () => {
+                            currentVoiceChannel = ch.id;   // 🔥 On stocke le salon vocal sélectionné
+                            showPage("page-call");         // 🔥 On ouvre la page d’appel
+                        };
                         voiceList.appendChild(div);
                     });
                 }
