@@ -20,11 +20,29 @@ window.onpopstate = () => {
     }
 };
 
-function showPage(id) {
-    document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
-    const page = document.getElementById(id);
-    if (page) page.classList.add('active');
+function showPage(id, push = true) {
+    document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
+    document.getElementById(id).classList.add("active");
+
+    if (push) {
+        history.pushState({ page: id }, "", "#" + id);
+    }
 }
+
+window.onpopstate = (event) => {
+    if (event.state && event.state.page) {
+        showPage(event.state.page, false); // false = ne pas créer une nouvelle entrée
+    }
+};
+
+window.addEventListener("load", () => {
+    const page = location.hash.replace("#", "") || "page-menu";
+
+    // 🔥 On enregistre la page initiale dans l’historique
+    history.replaceState({ page }, "", "#" + page);
+
+    showPage(page, false);
+});
 
 // ---------------------------------------------
 // 3) Charger les serveurs
