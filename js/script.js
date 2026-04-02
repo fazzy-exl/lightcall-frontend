@@ -559,8 +559,11 @@ const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
         localStorage.removeItem("userId");
+        localStorage.removeItem("token");
+        sessionStorage.clear();
+
         updateAuthUI();
-        window.location.reload();
+        showPage("page-menu"); // ← important
     });
 }
 
