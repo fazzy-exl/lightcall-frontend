@@ -1,5 +1,14 @@
 console.log("LightCall script chargé");
+
 let currentVoiceChannel = null;
+
+let currentUserId = null;
+
+// 🔥 Restaurer la session si elle existe
+const savedId = localStorage.getItem("userId");
+if (savedId) {
+    currentUserId = savedId;
+}
 
 // ---------------------------------------------
 // 1) Chargement initial
@@ -225,8 +234,12 @@ document.addEventListener("DOMContentLoaded", () => {
             .then(res => res.json())
             .then(data => {
                 alert("Serveur créé ! Code : " + data.invite_code);
-                showPage("page-server-view");
-                loadServer(data.server_id);
+
+                // 🔥 On recharge la liste des serveurs
+                loadServers();
+
+                // 🔥 On reste sur le menu
+                showPage("page-menu");
             });
 
         document.getElementById("create-server-popup").classList.add("hidden");
@@ -490,6 +503,7 @@ if (loginSubmit) {
             });
 
             const data = await response.json().catch(() => ({}));
+            console.log("Réponse du backend :", data);
 
             if (!response.ok) {
                 errorBox.textContent = "Nom d'utilisateur ou mot de passe incorrect";
@@ -506,9 +520,14 @@ if (loginSubmit) {
             }
 
             // 🔥 Succès → on active le mode connecté
-            localStorage.setItem("userId", data.userId);
+            currentUserId = data.user_id;
+
+            // 🔥 Sauvegarde la session pour rester connecté après refresh
+            localStorage.setItem("userId", data.user_id);
+
             updateAuthUI();
             document.getElementById("login-modal").style.display = "none";
+            showPage("page-menu");
 
         } catch (err) {
             // Empêche toute erreur console
@@ -528,25 +547,19 @@ if (loginSubmit) {
 // GESTION LOGIN / LOGOUT UI
 // -----------------------------
 function updateAuthUI() {
-    const userId = localStorage.getItem("userId");
+    const userId = currentUserId;
 
     const loginBtn = document.querySelector(".login-btn");
     const signupBtn = document.querySelector(".signup-btn");
     const logoutBtn = document.getElementById("logout-btn");
 
     if (userId) {
-        // Utilisateur connecté → cacher login/signup
         loginBtn.style.display = "none";
         signupBtn.style.display = "none";
-
-        // Montrer logout
         logoutBtn.style.display = "block";
     } else {
-        // Utilisateur déconnecté → montrer login/signup
         loginBtn.style.display = "block";
         signupBtn.style.display = "block";
-
-        // Cacher logout
         logoutBtn.style.display = "none";
     }
 }
@@ -558,12 +571,10 @@ document.addEventListener("DOMContentLoaded", updateAuthUI);
 const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) {
     logoutBtn.addEventListener("click", () => {
-        localStorage.removeItem("userId");
-        localStorage.removeItem("token");
-        sessionStorage.clear();
-
+        currentUserId = null;
+        localStorage.removeItem("userId"); // 🔥 efface la session
         updateAuthUI();
-        showPage("page-menu"); // ← important
+        showPage("page-menu");
     });
 }
 
