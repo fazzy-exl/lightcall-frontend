@@ -60,7 +60,7 @@ async function loadServers() {
     const list = document.getElementById("server-list");
     if (!list) return;
 
-    const userId = localStorage.getItem("userId");
+    const userId = currentUserId;
     if (!userId) return;
 
     const res = await fetch(`https://lightcall-backend.onrender.com/servers/${userId}`);
@@ -208,7 +208,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // --- Ouvrir popup créer serveur ---
     if (openCreate) openCreate.onclick = () => {
-        const userId = localStorage.getItem("userId");
+        const userId = currentUserId;
         if (!userId) return alert("Vous devez être connecté pour créer un serveur.");
         document.getElementById("create-server-popup").classList.remove("hidden");
     };
@@ -221,7 +221,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // --- Confirmer création ---
     if (confirmCreate) confirmCreate.onclick = () => {
         const name = serverNameInput.value.trim();
-        const userId = localStorage.getItem("userId");
+        const userId = currentUserId;
 
         if (!userId) return alert("Vous devez être connecté pour créer un serveur.");
         if (!name) return alert("Entre un nom de serveur !");
@@ -261,7 +261,7 @@ document.addEventListener("DOMContentLoaded", () => {
     const joinInput = document.getElementById("join-server-input");
 
     if (openJoin) openJoin.onclick = () => {
-        const userId = localStorage.getItem("userId");
+        const userId = currentUserId;
         if (!userId) return alert("Vous devez être connecté pour rejoindre un serveur.");
         document.getElementById("join-server-popup").classList.remove("hidden");
     };
@@ -272,7 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     if (confirmJoin) confirmJoin.onclick = () => {
         const code = joinInput.value.trim();
-        const userId = localStorage.getItem("userId");
+        const userId = currentUserId;
 
         if (!userId) return alert("Vous devez être connecté pour rejoindre un serveur.");
         if (!code) return alert("Entre un code d'invitation !");
