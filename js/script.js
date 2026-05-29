@@ -1,98 +1,371 @@
 console.log("LightCall script chargé");
 
-let currentVoiceChannel = null;
+const API = "https://lightcall-backend.onrender.com";
 
 let currentUserId = null;
+let currentChannelId = null;
+let lastMessageUserId = null;
 
-// 🔥 Restaurer la session si elle existe
 const savedId = localStorage.getItem("userId");
-if (savedId) {
-    currentUserId = savedId;
-}
+if (savedId) currentUserId = savedId;
 
-// ---------------------------------------------
-// 1) Chargement initial
-// ---------------------------------------------
-window.onload = () => {
-    if (document.getElementById("server-list")) {
-        loadServers();
+// WebSocket pour la messagerie texte (séparé du WS WebRTC dans call.js)
+const textWs = new WebSocket("wss://lightcall-backend.onrender.com");
+
+textWs.onopen = () => console.log("Text WS connecté");
+
+textWs.onmessage = (event) => {
+    const data = JSON.parse(event.data);
+    // On reçoit un message texte d'un autre utilisateur
+    if (data.type === "text_message" && data.channel_id == currentChannelId) {
+        if (String(data.user_id) !== String(currentUserId)) {
+            appendMessage(data);
+            scrollToBottom();
+        }
     }
 };
 
 // ---------------------------------------------
-// 2) Navigation interne
+// ROUTER
 // ---------------------------------------------
-window.onpopstate = () => {
-    if (document.getElementById("page-menu")) {
-        showPage("page-menu");
-        loadServers();
-    }
-};
-
-function showPage(id, push = true) {
+function showPage(id) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
-    document.getElementById(id).classList.add("active");
+    const page = document.getElementById(id);
+    if (page) page.classList.add("active");
+}
 
-    if (push) {
-        history.pushState({ page: id }, "", "#" + id);
+function navigate(path) {
+    history.pushState({}, "", path);
+    router();
+}
+
+function router() {
+    const path = window.location.pathname;
+    console.log("Router path:", path); // TEMPORAIRE
+
+    // Toujours recharger la sidebar au changement de route
+    if (currentUserId) loadServers();
+
+    if (path === "/" || path === "") {
+        showPage("page-menu");
+        return;
+    }
+
+    const serverMatch = path.match(/^\/server\/(\d+)$/);
+    if (serverMatch) {
+        showPage("page-server-view");
+        loadServer(serverMatch[1]);
+        return;
+    }
+
+    const callMatch = path.match(/^\/call\/(\d+)$/);
+    if (callMatch) {
+        showPage("page-call");
+        if (typeof initCallPage === "function") initCallPage(callMatch[1]);
+        return;
+    }
+
+    showPage("page-menu");
+}
+
+window.onpopstate = () => router();
+
+// Scripts en bas du body → DOM déjà prêt, pas besoin de DOMContentLoaded
+router();
+updateAuthUI();
+loadUserProfile();
+if (currentUserId) loadServers();
+
+// ---------------------------------------------
+// SERVEURS
+// ---------------------------------------------
+async function loadServer(serverId) {
+    // FIX : forcer l'affichage de la page serveur
+    console.log("loadServer appelé avec:", serverId)
+    showPage("page-server-view");
+
+    // Réinitialiser le chat
+    currentChannelId = null;
+    lastMessageUserId = null;
+    const chatPanel = document.getElementById("chat-panel");
+    const chatPlaceholder = document.getElementById("chat-placeholder");
+    if (chatPanel) chatPanel.classList.remove("active");
+    if (chatPlaceholder) chatPlaceholder.style.display = "";
+
+    // Afficher un état de chargement dans la sidebar
+    const textList = document.getElementById("text-channels");
+    const voiceList = document.getElementById("voice-channel-list");
+    if (textList) textList.innerHTML = `<div class="chat-loading" style="padding:8px 14px;font-size:0.8rem;">Chargement...</div>`;
+    if (voiceList) voiceList.innerHTML = "";
+
+    try {
+        const res = await fetch(`${API}/servers/${serverId}/full`);
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+
+        const data = await res.json();
+
+        if (!data || data.error) {
+            if (textList) textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;color:#f04747;">Erreur de chargement</div>`;
+            return;
+        }
+
+        // Nom du serveur
+        const sidebarName = document.getElementById("server-sidebar-name");
+        if (sidebarName) sidebarName.textContent = data.name;
+
+        // Salons textuels
+        if (textList) {
+            textList.innerHTML = "";
+            if (!data.text_channels?.length) {
+                textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
+            } else {
+                data.text_channels.forEach(ch => {
+                    const div = document.createElement("div");
+                    div.className = "ch-item";
+                    div.dataset.channelId = ch.id;
+                    div.innerHTML = `<span class="ch-icon">#</span>${ch.name}`;
+                    div.onclick = () => openTextChannel(ch.id, ch.name);
+                    textList.appendChild(div);
+                });
+            }
+        }
+
+        // Salons vocaux
+        if (voiceList) {
+            voiceList.innerHTML = "";
+            if (!data.voice_channels?.length) {
+                voiceList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
+            } else {
+                data.voice_channels.forEach(ch => {
+                    const div = document.createElement("div");
+                    div.className = "ch-item";
+                    div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
+                    div.onclick = () => navigate(`/call/${ch.id}`);
+                    voiceList.appendChild(div);
+                });
+            }
+        }
+
+    } catch (err) {
+        console.error("Erreur loadServer:", err);
+
+        // FIX : retry automatique après 2 secondes si le backend dormait
+        if (textList) textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
+        setTimeout(() => loadServer(serverId), 2000);
     }
 }
 
-window.onpopstate = (event) => {
-    if (event.state && event.state.page) {
-        showPage(event.state.page, false); // false = ne pas créer une nouvelle entrée
+// ---------------------------------------------
+// CHARGER UN SERVEUR
+// ---------------------------------------------
+function loadServer(serverId) {
+    // Réinitialiser le chat
+    currentChannelId = null;
+    lastMessageUserId = null;
+    document.getElementById("chat-panel").classList.remove("active");
+    document.getElementById("chat-placeholder").style.display = "";
+
+    fetch(`${API}/servers/${serverId}/full`)
+        .then(res => res.json())
+        .then(data => {
+            if (!data || data.error) {
+                alert("Impossible de charger le serveur.");
+                return;
+            }
+
+            // Nom du serveur dans la sidebar
+            const sidebarName = document.getElementById("server-sidebar-name");
+            if (sidebarName) sidebarName.textContent = data.name;
+
+            // Salons textuels
+            const textList = document.getElementById("text-channels");
+            if (textList) {
+                textList.innerHTML = "";
+                if (!data.text_channels || data.text_channels.length === 0) {
+                    textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
+                } else {
+                    data.text_channels.forEach(ch => {
+                        const div = document.createElement("div");
+                        div.className = "ch-item";
+                        div.dataset.channelId = ch.id;
+                        div.innerHTML = `<span class="ch-icon">#</span>${ch.name}`;
+                        div.onclick = () => openTextChannel(ch.id, ch.name);
+                        textList.appendChild(div);
+                    });
+                }
+            }
+
+            // Salons vocaux
+            const voiceList = document.getElementById("voice-channel-list");
+            if (voiceList) {
+                voiceList.innerHTML = "";
+                if (!data.voice_channels || data.voice_channels.length === 0) {
+                    voiceList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
+                } else {
+                    data.voice_channels.forEach(ch => {
+                        const div = document.createElement("div");
+                        div.className = "ch-item";
+                        div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
+                        div.onclick = () => navigate(`/call/${ch.id}`);
+                        voiceList.appendChild(div);
+                    });
+                }
+            }
+        });
+}
+
+// ---------------------------------------------
+// CHAT TEXTUEL
+// ---------------------------------------------
+function openTextChannel(channelId, channelName) {
+    currentChannelId = channelId;
+    lastMessageUserId = null;
+
+    // Header
+    document.getElementById("chat-header-name").textContent = channelName;
+    document.getElementById("chat-input").placeholder = `Message #${channelName}`;
+
+    // Highlight canal actif
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
+    const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
+    if (activeItem) activeItem.classList.add("active");
+
+    // Afficher le panneau
+    document.getElementById("chat-placeholder").style.display = "none";
+    document.getElementById("chat-panel").classList.add("active");
+
+    // Charger les messages
+    loadMessages(channelId);
+}
+
+async function loadMessages(channelId) {
+    const messagesDiv = document.getElementById("chat-messages");
+    messagesDiv.innerHTML = `<div class="chat-loading">Chargement...</div>`;
+    lastMessageUserId = null;
+
+    try {
+        const res = await fetch(`${API}/messages/${channelId}`);
+        const messages = await res.json();
+
+        messagesDiv.innerHTML = "";
+
+        if (!messages.length) {
+            messagesDiv.innerHTML = `<div class="chat-empty">Aucun message pour le moment.<br>Sois le premier à écrire !</div>`;
+            return;
+        }
+
+        messages.forEach(msg => appendMessage(msg));
+        scrollToBottom();
+
+    } catch (err) {
+        console.error("Erreur chargement messages:", err);
+        messagesDiv.innerHTML = `<div class="chat-empty">Impossible de charger les messages.</div>`;
     }
-};
+}
 
-window.addEventListener("load", () => {
-    const page = location.hash.replace("#", "") || "page-menu";
+function appendMessage(msg) {
+    const messagesDiv = document.getElementById("chat-messages");
+    if (!messagesDiv) return;
 
-    // 🔥 On enregistre la page initiale dans l’historique
-    history.replaceState({ page }, "", "#" + page);
+    // Retirer le message "vide" si présent
+    const emptyMsg = messagesDiv.querySelector(".chat-empty");
+    if (emptyMsg) emptyMsg.remove();
 
-    showPage(page, false);
+    const isContinuation = String(msg.user_id) === String(lastMessageUserId);
+    lastMessageUserId = msg.user_id;
+
+    const div = document.createElement("div");
+    div.className = "chat-message" + (isContinuation ? " continuation" : "");
+
+    const time = new Date(msg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const initial = (msg.username || "?").charAt(0).toUpperCase();
+    const color = stringToColor(msg.username || "");
+
+    div.innerHTML = `
+        <div class="chat-avatar" style="background:${color}">${initial}</div>
+        <div class="chat-bubble">
+            <div class="chat-meta">
+                <span class="chat-username" style="color:${color}">${escapeHtml(msg.username)}</span>
+                <span class="chat-time">${time}</span>
+            </div>
+            <div class="chat-text">${escapeHtml(msg.content)}</div>
+        </div>
+    `;
+
+    messagesDiv.appendChild(div);
+}
+
+async function sendMessage() {
+    if (!currentChannelId || !currentUserId) return;
+
+    const input = document.getElementById("chat-input");
+    const content = input.value.trim();
+    if (!content) return;
+
+    input.value = "";
+
+    try {
+        const res = await fetch(`${API}/messages`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ channel_id: currentChannelId, user_id: currentUserId, content })
+        });
+        const msg = await res.json();
+
+        if (msg.error) { console.error(msg.error); return; }
+
+        appendMessage(msg);
+        scrollToBottom();
+
+        // Notifier les autres via WS
+        if (textWs.readyState === WebSocket.OPEN) {
+            textWs.send(JSON.stringify({
+                type: "text_message",
+                channel_id: currentChannelId,
+                ...msg
+            }));
+        }
+
+    } catch (err) {
+        console.error("Erreur envoi message:", err);
+    }
+}
+
+function scrollToBottom() {
+    const div = document.getElementById("chat-messages");
+    if (div) div.scrollTop = div.scrollHeight;
+}
+
+// Entrée → envoyer
+document.addEventListener("DOMContentLoaded", () => {
+    const input = document.getElementById("chat-input");
+    const sendBtn = document.getElementById("chat-send-btn");
+
+    if (input) input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+    if (sendBtn) sendBtn.addEventListener("click", sendMessage);
 });
 
 // ---------------------------------------------
-// 3) Charger les serveurs
+// UTILITAIRES
 // ---------------------------------------------
-async function loadServers() {
-    const list = document.getElementById("server-list");
-    if (!list) return;
+function escapeHtml(text) {
+    const d = document.createElement("div");
+    d.appendChild(document.createTextNode(text));
+    return d.innerHTML;
+}
 
-    const userId = currentUserId;
-    if (!userId) return;
-
-    const res = await fetch(`https://lightcall-backend.onrender.com/servers/${userId}`);
-    const servers = await res.json();
-
-    list.innerHTML = "";
-
-    servers.forEach(server => {
-        const btn = document.createElement("button");
-        btn.className = "menu-item server-item";
-        btn.textContent = server.name;
-
-        btn.dataset.serverId = server.id;
-        btn.dataset.serverName = server.name;
-
-        btn.onclick = () => {
-            // 🔥 Plus de server.html → on affiche la page serveur dans index.html
-            showPage("page-server-view");
-            loadServer(server.id);
-        };
-
-        list.appendChild(btn);
-    });
+function stringToColor(str) {
+    const colors = ["#5865f2","#43b581","#f04747","#faa61a","#7289da","#1abc9c","#e91e63","#ff5722","#9c27b0"];
+    let hash = 0;
+    for (let i = 0; i < str.length; i++) hash = str.charCodeAt(i) + ((hash << 5) - hash);
+    return colors[Math.abs(hash) % colors.length];
 }
 
 // ---------------------------------------------
-// 4) Menu clic droit serveur
+// MENU CLIC DROIT SERVEUR
 // ---------------------------------------------
 const contextMenu = document.getElementById("server-context-menu");
-const deleteConfirm = document.getElementById("delete-server-confirm");
-const deleteText = document.getElementById("delete-server-text");
-
 let selectedServerId = null;
 let selectedServerName = null;
 
@@ -100,542 +373,291 @@ if (contextMenu) {
     document.addEventListener("contextmenu", (e) => {
         const serverItem = e.target.closest(".server-item");
         if (!serverItem) return;
-
         e.preventDefault();
-
         selectedServerId = serverItem.dataset.serverId;
         selectedServerName = serverItem.dataset.serverName;
-
         contextMenu.style.left = e.pageX + "px";
         contextMenu.style.top = e.pageY + "px";
         contextMenu.classList.remove("hidden");
     });
-
-    document.addEventListener("click", () => {
-        contextMenu.classList.add("hidden");
-    });
+    document.addEventListener("click", () => contextMenu.classList.add("hidden"));
 }
 
-// ---------------------------------------------
-// 5) Supprimer serveur
-// ---------------------------------------------
 const deleteOption = document.getElementById("delete-server-option");
-if (deleteOption) {
-    deleteOption.onclick = () => {
-        contextMenu.classList.add("hidden");
-        deleteText.textContent = `Supprimer le serveur "${selectedServerName}" ?`;
-        deleteConfirm.classList.remove("hidden");
-    };
-}
+const deleteConfirm = document.getElementById("delete-server-confirm");
+const deleteText = document.getElementById("delete-server-text");
+
+if (deleteOption) deleteOption.onclick = () => {
+    contextMenu.classList.add("hidden");
+    deleteText.textContent = `Supprimer le serveur "${selectedServerName}" ?`;
+    deleteConfirm.classList.remove("hidden");
+};
 
 const cancelDelete = document.getElementById("cancel-delete-server");
-if (cancelDelete) {
-    cancelDelete.onclick = () => {
-        deleteConfirm.classList.add("hidden");
-    };
-}
+if (cancelDelete) cancelDelete.onclick = () => deleteConfirm.classList.add("hidden");
 
 const confirmDelete = document.getElementById("confirm-delete-server");
-if (confirmDelete) {
-    confirmDelete.onclick = () => {
-        fetch(`https://lightcall-backend.onrender.com/servers/${selectedServerId}/delete`, {
-            method: "DELETE"
-        })
-            .then(res => res.json())
-            .then(() => {
-                deleteConfirm.classList.add("hidden");
-                loadServers();
-            });
-    };
-}
+if (confirmDelete) confirmDelete.onclick = () => {
+    fetch(`${API}/servers/${selectedServerId}/delete`, { method: "DELETE" })
+        .then(res => res.json())
+        .then(() => { deleteConfirm.classList.add("hidden"); loadServers(); });
+};
 
-// ---------------------------------------------
-// 6) Renommer serveur
-// ---------------------------------------------
 const renameOption = document.getElementById("rename-server-option");
-if (renameOption) {
-    renameOption.onclick = () => {
-        contextMenu.classList.add("hidden");
-        document.getElementById("rename-server-input").value = selectedServerName;
-        document.getElementById("rename-server-popup").classList.remove("hidden");
-    };
-}
+if (renameOption) renameOption.onclick = () => {
+    contextMenu.classList.add("hidden");
+    document.getElementById("rename-server-input").value = selectedServerName;
+    document.getElementById("rename-server-popup").classList.remove("hidden");
+};
 
 const cancelRename = document.getElementById("cancel-rename-server");
-if (cancelRename) {
-    cancelRename.onclick = () => {
-        document.getElementById("rename-server-popup").classList.add("hidden");
-    };
-}
+if (cancelRename) cancelRename.onclick = () => document.getElementById("rename-server-popup").classList.add("hidden");
 
 const confirmRename = document.getElementById("confirm-rename-server");
-if (confirmRename) {
-    confirmRename.onclick = () => {
-        const newName = document.getElementById("rename-server-input").value.trim();
-        if (!newName) return alert("Entre un nom valide !");
-
-        fetch(`https://lightcall-backend.onrender.com/servers/${selectedServerId}/rename`, {
-            method: "PUT",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ new_name: newName })
-        })
-            .then(res => res.json())
-            .then(data => {
-                if (data.error) return alert(data.error);
-
-                document.getElementById("rename-server-popup").classList.add("hidden");
-                loadServers();
-            });
-    };
-}
+if (confirmRename) confirmRename.onclick = () => {
+    const newName = document.getElementById("rename-server-input").value.trim();
+    if (!newName) return alert("Entre un nom valide !");
+    fetch(`${API}/servers/${selectedServerId}/rename`, {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ new_name: newName })
+    }).then(res => res.json()).then(data => {
+        if (data.error) return alert(data.error);
+        document.getElementById("rename-server-popup").classList.add("hidden");
+        loadServers();
+    });
+};
 
 const renameInput = document.getElementById("rename-server-input");
-if (renameInput) {
-    renameInput.addEventListener("keydown", (e) => {
-        if (e.key === "Enter") confirmRename.click();
-    });
-}
+if (renameInput) renameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmRename.click(); });
 
 // ---------------------------------------------
-// 7) Popups créer / rejoindre serveur
+// CRÉER / REJOINDRE SERVEUR
 // ---------------------------------------------
 document.addEventListener("DOMContentLoaded", () => {
-
     const openCreate = document.getElementById("open-create-server");
     const cancelCreate = document.getElementById("cancel-create-server");
     const confirmCreate = document.getElementById("confirm-create-server");
     const serverNameInput = document.getElementById("server-name-input");
 
-    // --- Ouvrir popup créer serveur ---
     if (openCreate) openCreate.onclick = () => {
-        const userId = currentUserId;
-        if (!userId) return alert("Vous devez être connecté pour créer un serveur.");
+        if (!currentUserId) return alert("Connecte-toi pour créer un serveur.");
         document.getElementById("create-server-popup").classList.remove("hidden");
     };
-
-    // --- Fermer popup ---
-    if (cancelCreate) cancelCreate.onclick = () => {
-        document.getElementById("create-server-popup").classList.add("hidden");
-    };
-
-    // --- Confirmer création ---
+    if (cancelCreate) cancelCreate.onclick = () => document.getElementById("create-server-popup").classList.add("hidden");
     if (confirmCreate) confirmCreate.onclick = () => {
         const name = serverNameInput.value.trim();
-        const userId = currentUserId;
-
-        if (!userId) return alert("Vous devez être connecté pour créer un serveur.");
+        if (!currentUserId) return alert("Connecte-toi d'abord.");
         if (!name) return alert("Entre un nom de serveur !");
-
-        fetch("https://lightcall-backend.onrender.com/servers/create", {
+        fetch(`${API}/servers/create`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, owner_id: userId })
-        })
-            .then(res => res.json())
-            .then(data => {
-                alert("Serveur créé ! Code : " + data.invite_code);
-
-                // 🔥 On recharge la liste des serveurs
-                loadServers();
-
-                // 🔥 On reste sur le menu
-                showPage("page-menu");
-            });
-
-        document.getElementById("create-server-popup").classList.add("hidden");
-        serverNameInput.value = "";
-    };
-
-    if (serverNameInput) {
-        serverNameInput.addEventListener("keydown", (e) => {
-            if (e.key === "Enter") confirmCreate.click();
+            body: JSON.stringify({ name, owner_id: currentUserId })
+        }).then(res => res.json()).then(data => {
+            alert("Serveur créé ! Code : " + data.invite_code);
+            document.getElementById("create-server-popup").classList.add("hidden");
+            serverNameInput.value = "";
+            loadServers();
+            navigate("/");
         });
-    }
+    };
+    if (serverNameInput) serverNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmCreate.click(); });
 
-    // ---------------------------------------------
-    // Rejoindre serveur
-    // ---------------------------------------------
     const openJoin = document.getElementById("open-join-server");
     const cancelJoin = document.getElementById("cancel-join-server");
     const confirmJoin = document.getElementById("confirm-join-server");
     const joinInput = document.getElementById("join-server-input");
 
     if (openJoin) openJoin.onclick = () => {
-        const userId = currentUserId;
-        if (!userId) return alert("Vous devez être connecté pour rejoindre un serveur.");
+        if (!currentUserId) return alert("Connecte-toi pour rejoindre un serveur.");
         document.getElementById("join-server-popup").classList.remove("hidden");
     };
-
-    if (cancelJoin) cancelJoin.onclick = () => {
-        document.getElementById("join-server-popup").classList.add("hidden");
-    };
-
+    if (cancelJoin) cancelJoin.onclick = () => document.getElementById("join-server-popup").classList.add("hidden");
     if (confirmJoin) confirmJoin.onclick = () => {
         const code = joinInput.value.trim();
-        const userId = currentUserId;
-
-        if (!userId) return alert("Vous devez être connecté pour rejoindre un serveur.");
+        if (!currentUserId) return alert("Connecte-toi d'abord.");
         if (!code) return alert("Entre un code d'invitation !");
-
-        fetch("https://lightcall-backend.onrender.com/servers/join-by-code", {
+        fetch(`${API}/servers/join-by-code`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ invite_code: code, user_id: userId })
-        })
-            .then(data => {
-                if (data.error) alert(data.error);
-                else {
-                    alert("Tu as rejoint : " + data.server_name);
-
-                    // 🔥 On affiche la page serveur dans index.html
-                    showPage("page-server-view");
-
-                    // 🔥 On charge les infos du serveur
-                    loadServer(data.server_id);
-                }
-            });
-        document.getElementById("join-server-popup").classList.add("hidden");
-        joinInput.value = "";
+            body: JSON.stringify({ invite_code: code, user_id: currentUserId })
+        }).then(res => res.json()).then(data => {
+            if (data.error) return alert(data.error);
+            alert("Tu as rejoint : " + data.server_name);
+            document.getElementById("join-server-popup").classList.add("hidden");
+            joinInput.value = "";
+            navigate(`/server/${data.server_id}`);
+        });
     };
 });
 
 // ---------------------------------------------
-// 8) Sidebar redimensionnable
+// SIDEBAR REDIMENSIONNABLE
 // ---------------------------------------------
 const sidebar = document.getElementById("sidebar");
 const resizer = document.getElementById("sidebar-resizer");
-
 if (sidebar && resizer) {
     let isResizing = false;
-
-    resizer.addEventListener("mousedown", () => {
-        isResizing = true;
-        document.body.style.cursor = "ew-resize";
-        document.body.style.userSelect = "none";
-    });
-
-    document.addEventListener("mousemove", (e) => {
-        if (!isResizing) return;
-
-        const newWidth = e.clientX;
-        if (newWidth > 180 && newWidth < 500) {
-            sidebar.style.width = newWidth + "px";
-        }
-    });
-
-    document.addEventListener("mouseup", () => {
-        isResizing = false;
-        document.body.style.cursor = "default";
-        document.body.style.userSelect = "auto";
-    });
+    resizer.addEventListener("mousedown", () => { isResizing = true; document.body.style.cursor = "ew-resize"; document.body.style.userSelect = "none"; });
+    document.addEventListener("mousemove", (e) => { if (!isResizing) return; const w = e.clientX; if (w > 180 && w < 500) sidebar.style.width = w + "px"; });
+    document.addEventListener("mouseup", () => { isResizing = false; document.body.style.cursor = "default"; document.body.style.userSelect = "auto"; });
 }
 
 // ---------------------------------------------
-// 9) Menu +
+// MENU +
 // ---------------------------------------------
 const plusBtn = document.getElementById("server-plus-btn");
 const plusMenu = document.getElementById("server-plus-menu");
-
 if (plusBtn && plusMenu) {
-    plusBtn.addEventListener("click", () => {
-        plusMenu.classList.toggle("hidden");
-    });
-
-    document.addEventListener("click", (e) => {
-        if (!plusBtn.contains(e.target) && !plusMenu.contains(e.target)) {
-            plusMenu.classList.add("hidden");
-        }
-    });
+    plusBtn.addEventListener("click", () => plusMenu.classList.toggle("hidden"));
+    document.addEventListener("click", (e) => { if (!plusBtn.contains(e.target) && !plusMenu.contains(e.target)) plusMenu.classList.add("hidden"); });
 }
 
 // ---------------------------------------------
-// 10) Icône utilisateur
+// ICÔNE UTILISATEUR
 // ---------------------------------------------
 const userIcon = document.getElementById("user-icon");
-if (userIcon) {
-    userIcon.addEventListener("click", () => {
-        userIcon.classList.toggle("active");
-    });
-}
+if (userIcon) userIcon.addEventListener("click", () => userIcon.classList.toggle("active"));
 
 // ---------------------------------------------
-// 11) Popups Login / Sign Up
+// MODALS
 // ---------------------------------------------
 window.addEventListener("DOMContentLoaded", () => {
-
-    // Boutons Login / Sign Up
     const loginBtn = document.querySelector(".login-btn");
     const signupBtn = document.querySelector(".signup-btn");
+    if (loginBtn) loginBtn.addEventListener("click", () => document.getElementById("login-modal").style.display = "flex");
+    if (signupBtn) signupBtn.addEventListener("click", () => document.getElementById("signup-modal").style.display = "flex");
 
-    if (loginBtn) loginBtn.addEventListener("click", () => {
-        document.getElementById("login-modal").style.display = "flex";
-    });
-
-    if (signupBtn) signupBtn.addEventListener("click", () => {
-        document.getElementById("signup-modal").style.display = "flex";
-    });
-
-    // Boutons X
     document.querySelectorAll(".close-modal").forEach(btn => {
-        btn.addEventListener("click", () => {
-            const modal = btn.closest(".modal");
-            if (modal) modal.style.display = "none";
-        });
+        btn.addEventListener("click", () => { const m = btn.closest(".modal"); if (m) m.style.display = "none"; });
     });
-
-    // Fermer en cliquant à l'extérieur
     document.querySelectorAll(".modal").forEach(modal => {
-        modal.addEventListener("click", (e) => {
-            if (e.target === modal && !window.getSelection().toString()) {
-                modal.style.display = "none";
-            }
-        });
+        modal.addEventListener("click", (e) => { if (e.target === modal && !window.getSelection().toString()) modal.style.display = "none"; });
     });
 
-    // 👁️ Afficher / cacher le mot de passe
     document.querySelectorAll(".password-wrapper").forEach(wrapper => {
         const input = wrapper.querySelector(".password-field");
-        const eyeVisible = wrapper.querySelector(".eye-visible");
-        const eyeHidden = wrapper.querySelector(".eye-hidden");
-
-        if (eyeVisible && eyeHidden && input) {
-            eyeVisible.addEventListener("click", () => {
-                input.type = "text";
-                eyeVisible.style.display = "none";
-                eyeHidden.style.display = "block";
-            });
-
-            eyeHidden.addEventListener("click", () => {
-                input.type = "password";
-                eyeHidden.style.display = "none";
-                eyeVisible.style.display = "block";
-            });
+        const eyeV = wrapper.querySelector(".eye-visible");
+        const eyeH = wrapper.querySelector(".eye-hidden");
+        if (eyeV && eyeH && input) {
+            eyeV.addEventListener("click", () => { input.type = "text"; eyeV.style.display = "none"; eyeH.style.display = "block"; });
+            eyeH.addEventListener("click", () => { input.type = "password"; eyeH.style.display = "none"; eyeV.style.display = "block"; });
         }
     });
 });
 
 // ---------------------------------------------
-// 12) Sign Up
+// SIGN UP
 // ---------------------------------------------
 const signupSubmit = document.getElementById("signup-submit");
 if (signupSubmit) {
     signupSubmit.addEventListener("click", async () => {
-
         const username = document.getElementById("signup-username");
         const password = document.getElementById("signup-password");
         const errorBox = document.getElementById("signup-error");
-
-        // Reset message
         errorBox.style.display = "none";
-        errorBox.textContent = "";
 
-        const response = await fetch("http://localhost:3001/register", {
+        const response = await fetch(`${API}/register`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-                username: username.value,
-                password: password.value
-            })
+            body: JSON.stringify({ username: username.value, password: password.value })
         });
-
-        if (!response.ok) {
-            errorBox.textContent = "Erreur lors de la création du compte";
-            errorBox.style.display = "block";
-
-            username.value = "";
-            password.value = "";
-
-            return;
-        }
-
         const data = await response.json();
 
-        // Si erreur backend → message + reset des champs
-        if (!data.success) {
-            errorBox.textContent = data.message || "Erreur lors de la création du compte";
+        if (!response.ok || !data.success) {
+            errorBox.textContent = data.error || "Erreur lors de la création du compte";
             errorBox.style.display = "block";
-
-            username.value = "";
-            password.value = "";
-
+            username.value = ""; password.value = "";
             return;
         }
 
-        // Succès
-        localStorage.setItem("userId", data.userId);
-        updateAuthUI();
+        currentUserId = String(data.user_id);
+        localStorage.setItem("userId", currentUserId);
+        updateAuthUI(); loadUserProfile();
         document.getElementById("signup-modal").style.display = "none";
     });
-
-    // Effacer l’erreur quand l’utilisateur retape
     ["signup-username", "signup-password"].forEach(id => {
-        const input = document.getElementById(id);
-        input.addEventListener("input", () => {
-            const errorBox = document.getElementById("signup-error");
-            errorBox.style.display = "none";
-        });
+        document.getElementById(id).addEventListener("input", () => { document.getElementById("signup-error").style.display = "none"; });
     });
 }
 
 // ---------------------------------------------
-// 13) Login
+// LOGIN
 // ---------------------------------------------
 const loginSubmit = document.getElementById("login-submit");
 if (loginSubmit) {
     loginSubmit.addEventListener("click", async () => {
-
         const username = document.getElementById("login-username");
         const password = document.getElementById("login-password");
         const errorBox = document.getElementById("login-error");
         const modal = document.getElementById("login-modal").querySelector(".modal-content");
-
         errorBox.style.display = "none";
-        errorBox.textContent = "";
 
         try {
-            const response = await fetch("http://localhost:3001/login", {
+            const response = await fetch(`${API}/login`, {
                 method: "POST",
                 headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    username: username.value,
-                    password: password.value
-                })
+                body: JSON.stringify({ username: username.value, password: password.value })
             });
-
             const data = await response.json().catch(() => ({}));
-            console.log("Réponse du backend :", data);
 
             if (!response.ok) {
                 errorBox.textContent = "Nom d'utilisateur ou mot de passe incorrect";
                 errorBox.style.display = "block";
-
-                username.value = "";
-                password.value = "";
-
+                username.value = ""; password.value = "";
                 modal.classList.remove("shake");
                 void modal.offsetWidth;
                 modal.classList.add("shake");
-
                 return;
             }
 
-            // 🔥 Succès → on active le mode connecté
-            currentUserId = data.user_id;
-
-            // 🔥 Sauvegarde la session pour rester connecté après refresh
-            localStorage.setItem("userId", data.user_id);
-
-            updateAuthUI();
+            currentUserId = String(data.user_id);
+            localStorage.setItem("userId", currentUserId);
+            updateAuthUI(); loadUserProfile(); loadServers();
             document.getElementById("login-modal").style.display = "none";
-            showPage("page-menu");
 
-        } catch (err) {
-            // Empêche toute erreur console
-        }
+        } catch (err) { console.error("Erreur login:", err); }
     });
-
     ["login-username", "login-password"].forEach(id => {
-        const input = document.getElementById(id);
-        input.addEventListener("input", () => {
-            const errorBox = document.getElementById("login-error");
-            errorBox.style.display = "none";
-        });
+        document.getElementById(id).addEventListener("input", () => { document.getElementById("login-error").style.display = "none"; });
     });
 }
 
-// -----------------------------
-// GESTION LOGIN / LOGOUT UI
-// -----------------------------
+// ---------------------------------------------
+// AUTH UI
+// ---------------------------------------------
 function updateAuthUI() {
-    const userId = currentUserId;
-
     const loginBtn = document.querySelector(".login-btn");
     const signupBtn = document.querySelector(".signup-btn");
     const logoutBtn = document.getElementById("logout-btn");
-
-    if (userId) {
-        loginBtn.style.display = "none";
-        signupBtn.style.display = "none";
-        logoutBtn.style.display = "block";
+    if (currentUserId) {
+        if (loginBtn) loginBtn.style.display = "none";
+        if (signupBtn) signupBtn.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "block";
     } else {
-        loginBtn.style.display = "block";
-        signupBtn.style.display = "block";
-        logoutBtn.style.display = "none";
+        if (loginBtn) loginBtn.style.display = "block";
+        if (signupBtn) signupBtn.style.display = "block";
+        if (logoutBtn) logoutBtn.style.display = "none";
     }
 }
 
-// Appeler au chargement
-document.addEventListener("DOMContentLoaded", updateAuthUI);
-
-// Bouton logout
 const logoutBtn = document.getElementById("logout-btn");
-if (logoutBtn) {
-    logoutBtn.addEventListener("click", () => {
-        currentUserId = null;
-        localStorage.removeItem("userId"); // 🔥 efface la session
-        updateAuthUI();
-        showPage("page-menu");
-    });
-}
+if (logoutBtn) logoutBtn.addEventListener("click", () => {
+    currentUserId = null;
+    localStorage.removeItem("userId");
+    updateAuthUI();
+    navigate("/");
+});
 
 // ---------------------------------------------
-// Charger un serveur (affichage dans page-server-view)
+// PROFIL
 // ---------------------------------------------
-function loadServer(serverId) {
-
-    fetch(`https://lightcall-backend.onrender.com/servers/${serverId}/full`)
-        .then(res => res.json())
-        .then(data => {
-
-            if (!data || data.error) {
-                console.error("Erreur serveur :", data.error);
-                alert("Impossible de charger le serveur.");
-                return;
-            }
-
-            // --- Titre du serveur ---
-            const title = document.getElementById("server-view-title");
-            if (title) title.textContent = data.name;
-
-            // --- Salons textuels ---
-            const textList = document.getElementById("text-channels");
-            if (textList) {
-                textList.innerHTML = "";
-
-                if (!data.text_channels || data.text_channels.length === 0) {
-                    textList.innerHTML = `<div class="server-empty">Aucun salon textuel</div>`;
-                } else {
-                    data.text_channels.forEach(ch => {
-                        const div = document.createElement("div");
-                        div.classList.add("server-item");
-                        div.textContent = `# ${ch.name}`;
-                        div.onclick = () => alert("Salon textuel : " + ch.name);
-                        textList.appendChild(div);
-                    });
-                }
-            }
-
-            // --- Salons vocaux ---
-            const voiceList = document.getElementById("voice-channel-list");
-            if (voiceList) {
-                voiceList.innerHTML = "";
-
-                if (!data.voice_channels || data.voice_channels.length === 0) {
-                    voiceList.innerHTML = `<div class="server-empty">Aucun salon vocal</div>`;
-                } else {
-                    data.voice_channels.forEach(ch => {
-                        const div = document.createElement("div");
-                        div.classList.add("server-item");
-                        div.textContent = `🔊 ${ch.name}`;
-                        div.onclick = () => {
-                            currentVoiceChannel = ch.id;   // 🔥 On stocke le salon vocal sélectionné
-                            showPage("page-call");         // 🔥 On ouvre la page d’appel
-                        };
-                        voiceList.appendChild(div);
-                    });
-                }
-            }
-
-            console.log("Serveur chargé :", data);
-        });
+async function loadUserProfile() {
+    if (!currentUserId) return;
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}`);
+        const data = await res.json();
+        const userInfo = document.getElementById("user-info");
+        if (userInfo && data.username) userInfo.textContent = data.username;
+    } catch (err) { console.log("Impossible de charger le profil"); }
 }

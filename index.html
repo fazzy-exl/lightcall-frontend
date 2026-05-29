@@ -1,107 +1,116 @@
 <!DOCTYPE html>
-<html>
+<html lang="fr">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LightCall</title>
     <link rel="stylesheet" href="css/style.css">
 </head>
-
 <body>
 
 <div id="user-icon">
     <img id="user-avatar" src="images/Casque Transparent.JPEG" alt="avatar">
-    <span id="username">Fazzy_exl</span>
+    <span id="user-info">LightCall</span>
     <div id="user-buttons">
         <button class="user-btn login-btn">Login</button>
         <button class="user-btn signup-btn">Sign Up</button>
-        <button id="logout-btn" class="user-btn" style="display:none; width: 150px;">Se Déconnecter</button>
+        <button id="logout-btn" class="user-btn" style="display:none;">Se Déconnecter</button>
     </div>
 </div>
 
-<!-- PAGE 1 : MENU PRINCIPAL -->
-<div id="page-menu" class="page active">
-
-    <div id="sidebar">
-        <h1 class="menu-title">LightCall</h1>
-
-        <div class="menu-container">
-
-            <div class="menu-column">
-                <h2>Serveurs</h2>
-                <div id="server-list" class="menu-list"></div>
-                <button id="server-plus-btn">+</button>
-                <div id="server-plus-menu" class="hidden">
-                    <div class="menu-item" id="open-create-server">Créer un serveur</div>
-                    <div class="menu-item" id="open-join-server">Rejoindre un serveur</div>
-                </div>
+<!-- SIDEBAR GLOBALE (serveurs) -->
+<div id="sidebar">
+    <h1 class="menu-title">LightCall</h1>
+    <div class="menu-container">
+        <div class="menu-column">
+            <h2>Serveurs</h2>
+            <div id="server-list" class="menu-list"></div>
+            <button id="server-plus-btn">+</button>
+            <div id="server-plus-menu" class="hidden">
+                <div class="menu-item" id="open-create-server">Créer un serveur</div>
+                <div class="menu-item" id="open-join-server">Rejoindre un serveur</div>
             </div>
-
-            <div class="menu-column">
-                <h2>Messages Privés</h2>
-                <div id="dm-list" class="menu-list">
-                    <div class="menu-empty">Aucun ami pour le moment</div>
-                </div>
-            </div>
-
         </div>
-
-        <div id="sidebar-footer">
-            <div id="settings-btn">⚙️ Paramètres</div>
+        <div class="menu-column">
+            <h2>Messages Privés</h2>
+            <div id="dm-list" class="menu-list">
+                <div class="menu-empty">Aucun ami pour le moment</div>
+            </div>
         </div>
     </div>
-
+    <div id="sidebar-footer">
+        <div id="settings-btn">⚙️ Paramètres</div>
+    </div>
     <div id="sidebar-resizer"></div>
+</div>
 
-</div> <!-- FIN PAGE MENU -->
+<!-- ZONE PRINCIPALE -->
+<div id="main-content">
 
-<!-- PAGE 2 : PAGE SERVEUR -->
-<div id="page-server-view" class="page">
+    <!-- PAGE 1 : MENU -->
+    <div id="page-menu" class="page active">
+        <div class="page-placeholder">
+            <p>Sélectionne un serveur pour commencer.</p>
+        </div>
+    </div>
 
-    <h1 id="server-view-title">Serveur</h1>
+    <!-- PAGE 2 : SERVEUR — layout Discord -->
+    <div id="page-server-view" class="page">
 
-    <div class="server-container">
-
-        <div class="server-column">
-            <h2>Salons textuels</h2>
-            <div id="text-channels" class="server-list">
-                <div class="server-empty">Aucun salon textuel</div>
+        <!-- Sidebar canaux -->
+        <div id="server-channel-sidebar">
+            <div id="server-sidebar-name">Serveur</div>
+            <div class="ch-section">Salons texte</div>
+            <div id="text-channels"></div>
+            <div class="ch-section">Salons vocaux</div>
+            <div id="voice-channel-list"></div>
+            <div id="server-sidebar-footer">
+                <button class="back-btn" onclick="navigate('/')">← Retour</button>
             </div>
         </div>
 
-        <div class="server-column">
-            <h2>Salons vocaux</h2>
-            <div id="voice-channels" class="server-list">
-                <div id="voice-channel-list"></div>
+        <!-- Zone chat -->
+        <div id="chat-area">
+            <div id="chat-placeholder">
+                <div class="chat-placeholder-icon">#</div>
+                <p>Sélectionne un salon textuel<br>pour commencer à discuter.</p>
+            </div>
+            <div id="chat-panel">
+                <div id="chat-header">
+                    <span id="chat-header-hash">#</span>
+                    <span id="chat-header-name">général</span>
+                </div>
+                <div id="chat-messages"></div>
+                <div id="chat-input-area">
+                    <input id="chat-input" type="text" placeholder="Envoyer un message...">
+                    <button id="chat-send-btn">↑</button>
+                </div>
             </div>
         </div>
 
     </div>
 
-    <button class="back-btn" onclick="showPage('page-menu')">Retour</button>
-</div>
-
-<!-- PAGE 3 : PAGE APPEL -->
-<div id="page-call" class="page">
-    <div id="app">
-        <h1>LightCall – Gaming Server</h1>
-
-        <div id="videos"></div>
-
-        <div id="controls">
-            <button id="joinBtn">Rejoindre</button>
-            <button id="toggleCamBtn">Caméra ON/OFF</button>
-            <button id="toggleMicBtn">Micro ON/OFF</button>
-            <button id="shareBtn">Partager</button>
+    <!-- PAGE 3 : APPEL VOCAL -->
+    <div id="page-call" class="page">
+        <div id="app">
+            <h1>LightCall – Salon vocal</h1>
+            <div id="videos"></div>
+            <div id="controls">
+                <button id="joinBtn">Rejoindre</button>
+                <button id="toggleCamBtn">Caméra ON/OFF</button>
+                <button id="toggleMicBtn">Micro ON/OFF</button>
+                <button id="shareBtn">Partager</button>
+            </div>
+            <button onclick="if(typeof stopCall==='function')stopCall(); navigate('/');">Quitter l'appel</button>
         </div>
-
-        <button onclick="showPage('page-menu')">Quitter l’appel</button>
     </div>
+
 </div>
 
-<!-- POPUPS & MENUS (inchangés) -->
+<!-- MENUS CONTEXTUELS & POPUPS -->
 <div id="server-context-menu" class="hidden">
-    <div id="rename-server-option">Renommer serveur</div>
-    <div id="delete-server-option">Supprimer serveur</div>
+    <div id="rename-server-option">Renommer le serveur</div>
+    <div id="delete-server-option">Supprimer le serveur</div>
 </div>
 
 <div id="delete-server-confirm" class="popup hidden">
@@ -145,51 +154,38 @@
     </div>
 </div>
 
-<!-- LOGIN / SIGNUP -->
+<!-- MODALS LOGIN / SIGNUP -->
 <div id="login-modal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
         <h2>Login</h2>
-        <input id="login-username" type="text" placeholder="Username">
-
+        <input id="login-username" type="text" placeholder="Nom d'utilisateur" autocomplete="username">
         <div class="password-wrapper">
-            <input id="login-password" type="password" class="password-field" placeholder="Password">
-            <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
-                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
-            </svg>
-            <svg class="toggle-password eye-hidden" viewBox="0 0 24 24">
-                <path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/>
-            </svg>
+            <input id="login-password" type="password" class="password-field" placeholder="Mot de passe" autocomplete="current-password">
+            <svg class="toggle-password eye-visible" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/></svg>
+            <svg class="toggle-password eye-hidden" viewBox="0 0 24 24" style="display:none;"><path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/></svg>
         </div>
-
-        <p id="login-error" style="color: red; font-size: 14px; margin-top: 5px; display: none;"></p>
-
-        <button id="login-submit" class="modal-btn">Submit</button>
+        <p id="login-error" style="color:red;font-size:14px;margin-top:5px;display:none;"></p>
+        <button id="login-submit" class="modal-btn">Se connecter</button>
     </div>
 </div>
 
 <div id="signup-modal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>
-        <h2>Sign Up</h2>
-        <input id="signup-username" type="text" placeholder="Username">
-
+        <h2>Créer un compte</h2>
+        <input id="signup-username" type="text" placeholder="Nom d'utilisateur" autocomplete="username">
         <div class="password-wrapper">
-            <input id="signup-password" type="password" class="password-field" placeholder="Password">
-            <svg class="toggle-password eye-visible" viewBox="0 0 24 24">
-                <path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/>
-            </svg>
-            <svg class="toggle-password eye-hidden" viewBox="0 0 24 24">
-                <path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/>
-            </svg>
+            <input id="signup-password" type="password" class="password-field" placeholder="Mot de passe" autocomplete="new-password">
+            <svg class="toggle-password eye-visible" viewBox="0 0 24 24"><path d="M12 4.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5zm0 12a4.5 4.5 0 110-9 4.5 4.5 0 010 9z"/></svg>
+            <svg class="toggle-password eye-hidden" viewBox="0 0 24 24" style="display:none;"><path d="M2 4.27L3.28 3 21 20.72 19.73 22l-2.3-2.3A10.94 10.94 0 0112 19.5C7 19.5 2.73 16.39 1 12a11.2 11.2 0 013.44-4.73L2 4.27z"/></svg>
         </div>
-
-        <button id="signup-submit" class="modal-btn">Create Account</button>
+        <p id="signup-error" style="color:red;font-size:14px;margin-top:5px;display:none;"></p>
+        <button id="signup-submit" class="modal-btn">Créer le compte</button>
     </div>
 </div>
 
 <script src="js/script.js"></script>
 <script src="js/call.js"></script>
-
 </body>
 </html>
