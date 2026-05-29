@@ -9,7 +9,7 @@
 <body>
 
 <div id="user-icon">
-    <img id="user-avatar" src="images/Casque Transparent.JPEG" alt="avatar">
+    <img id="user-avatar" src="/images/Casque Transparent.JPEG" alt="avatar">
     <span id="user-info">LightCall</span>
     <div id="user-buttons">
         <button class="user-btn login-btn">Login</button>
@@ -18,7 +18,7 @@
     </div>
 </div>
 
-<!-- SIDEBAR GLOBALE (serveurs) -->
+<!-- SIDEBAR GLOBALE -->
 <div id="sidebar">
     <h1 class="menu-title">LightCall</h1>
     <div class="menu-container">
@@ -69,12 +69,16 @@
             </div>
         </div>
 
-        <!-- Zone chat -->
+        <!-- Zone chat / call -->
         <div id="chat-area">
+
+            <!-- Placeholder -->
             <div id="chat-placeholder">
                 <div class="chat-placeholder-icon">#</div>
-                <p>Sélectionne un salon textuel<br>pour commencer à discuter.</p>
+                <p>Sélectionne un salon pour commencer.</p>
             </div>
+
+            <!-- Panneau chat textuel -->
             <div id="chat-panel">
                 <div id="chat-header">
                     <span id="chat-header-hash">#</span>
@@ -86,22 +90,23 @@
                     <button id="chat-send-btn">↑</button>
                 </div>
             </div>
-        </div>
 
-    </div>
-
-    <!-- PAGE 3 : APPEL VOCAL -->
-    <div id="page-call" class="page">
-        <div id="app">
-            <h1>LightCall – Salon vocal</h1>
-            <div id="videos"></div>
-            <div id="controls">
-                <button id="joinBtn">Rejoindre</button>
-                <button id="toggleCamBtn">Caméra ON/OFF</button>
-                <button id="toggleMicBtn">Micro ON/OFF</button>
-                <button id="shareBtn">Partager</button>
+            <!-- Panneau appel vocal (dans la page serveur) -->
+            <div id="call-panel">
+                <div id="call-panel-header">
+                    <span class="call-panel-icon">🔊</span>
+                    <span id="call-panel-name">général</span>
+                    <button id="call-leave-btn">Quitter le salon</button>
+                </div>
+                <div id="videos"></div>
+                <div id="controls">
+                    <button id="joinBtn">Rejoindre</button>
+                    <button id="toggleCamBtn">Caméra ON/OFF</button>
+                    <button id="toggleMicBtn">Micro ON/OFF</button>
+                    <button id="shareBtn">Partager</button>
+                </div>
             </div>
-            <button onclick="if(typeof stopCall==='function')stopCall(); navigate('/');">Quitter l'appel</button>
+
         </div>
     </div>
 
@@ -154,7 +159,7 @@
     </div>
 </div>
 
-<!-- MODALS LOGIN / SIGNUP -->
+<!-- MODALS -->
 <div id="login-modal" class="modal">
     <div class="modal-content">
         <span class="close-modal">&times;</span>

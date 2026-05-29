@@ -5,6 +5,7 @@ const API = "https://lightcall-backend.onrender.com";
 let currentUserId = null;
 let currentChannelId = null;
 let lastMessageUserId = null;
+let currentServerId = null;
 
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
@@ -54,20 +55,13 @@ function router() {
         return;
     }
 
-    const callMatch = path.match(/^\/call\/(\d+)\/?$/);
-    if (callMatch) {
-        showPage("page-call");
-        if (typeof initCallPage === "function") initCallPage(callMatch[1]);
-        return;
-    }
-
     showPage("page-menu");
 }
 
 window.onpopstate = () => router();
 
 // =============================================
-// CHARGER LA LISTE DES SERVEURS (sidebar)
+// LISTE DES SERVEURS
 // =============================================
 
 async function loadServers() {
@@ -100,9 +94,12 @@ async function loadServers() {
 
 async function loadServer(serverId) {
     showPage("page-server-view");
-
+    currentServerId = serverId;
     currentChannelId = null;
     lastMessageUserId = null;
+
+    // Fermer le call si on change de serveur
+    leaveCall();
 
     const chatPanel = document.getElementById("chat-panel");
     const chatPlaceholder = document.getElementById("chat-placeholder");
@@ -111,8 +108,6 @@ async function loadServer(serverId) {
 
     const textList = document.getElementById("text-channels");
     const voiceList = document.getElementById("voice-channel-list");
-    if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Chargement...</div>`;
-    if (voiceList) voiceList.innerHTML = "";
 
     try {
         const res = await fetch(`${API}/servers/${serverId}/full`);
@@ -153,8 +148,10 @@ async function loadServer(serverId) {
                 data.voice_channels.forEach(ch => {
                     const div = document.createElement("div");
                     div.className = "ch-item";
+                    div.dataset.channelId = ch.id;
                     div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
-                    div.onclick = () => navigate(`/call/${ch.id}`);
+                    // FIX : plus de navigate, on reste sur la page serveur
+                    div.onclick = () => openVoiceChannel(ch.id, ch.name);
                     voiceList.appendChild(div);
                 });
             }
@@ -168,10 +165,51 @@ async function loadServer(serverId) {
 }
 
 // =============================================
+// SALON VOCAL — dans la page serveur
+// =============================================
+
+function openVoiceChannel(channelId, channelName) {
+    // Cacher le chat textuel, afficher le panneau d'appel
+    document.getElementById("chat-placeholder").style.display = "none";
+    document.getElementById("chat-panel").classList.remove("active");
+    document.getElementById("call-panel").classList.add("active");
+    document.getElementById("call-panel-name").textContent = channelName;
+
+    // Vider les vidéos de l'appel précédent
+    const videos = document.getElementById("videos");
+    if (videos) videos.innerHTML = "";
+
+    // Mettre en évidence le salon vocal actif
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
+    const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
+    if (activeItem) activeItem.classList.add("active");
+
+    // Lancer la page d'appel
+    if (typeof initCallPage === "function") initCallPage(channelId);
+}
+
+function leaveCall() {
+    const callPanel = document.getElementById("call-panel");
+    if (!callPanel || !callPanel.classList.contains("active")) return;
+
+    // Arrêter le call proprement
+    if (typeof stopCall === "function") stopCall();
+
+    callPanel.classList.remove("active");
+    document.getElementById("chat-placeholder").style.display = "";
+
+    // Retirer le highlight des salons vocaux
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
+}
+
+// =============================================
 // CHAT TEXTUEL
 // =============================================
 
 function openTextChannel(channelId, channelName) {
+    // Fermer le call si ouvert
+    leaveCall();
+
     currentChannelId = channelId;
     lastMessageUserId = null;
 
@@ -359,7 +397,7 @@ const confirmDelete = document.getElementById("confirm-delete-server");
 if (confirmDelete) confirmDelete.onclick = () => {
     fetch(`${API}/servers/${selectedServerId}/delete`, { method: "DELETE" })
         .then(res => res.json())
-        .then(() => { deleteConfirm.classList.add("hidden"); loadServers(); });
+        .then(() => { deleteConfirm.classList.add("hidden"); loadServers(); navigate("/"); });
 };
 
 const renameOption = document.getElementById("rename-server-option");
@@ -481,7 +519,7 @@ const userIcon = document.getElementById("user-icon");
 if (userIcon) userIcon.addEventListener("click", () => userIcon.classList.toggle("active"));
 
 // =============================================
-// MODALS LOGIN / SIGNUP
+// MODALS
 // =============================================
 
 const loginBtn = document.querySelector(".login-btn");
@@ -589,7 +627,6 @@ if (loginSubmit) {
     });
 }
 
-// Logout
 const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) logoutBtn.addEventListener("click", () => {
     currentUserId = null;
@@ -598,6 +635,10 @@ if (logoutBtn) logoutBtn.addEventListener("click", () => {
     navigate("/");
 });
 
+// Bouton quitter le call
+const callLeaveBtn = document.getElementById("call-leave-btn");
+if (callLeaveBtn) callLeaveBtn.addEventListener("click", leaveCall);
+
 // Chat — Entrée pour envoyer
 const chatInput = document.getElementById("chat-input");
 const chatSendBtn = document.getElementById("chat-send-btn");
@@ -605,7 +646,7 @@ if (chatInput) chatInput.addEventListener("keydown", e => { if (e.key === "Enter
 if (chatSendBtn) chatSendBtn.addEventListener("click", sendMessage);
 
 // =============================================
-// INITIALISATION — toujours à la toute fin
+// INITIALISATION
 // =============================================
 
 router();
