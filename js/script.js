@@ -9,14 +9,11 @@ let lastMessageUserId = null;
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
 
-// WebSocket pour la messagerie texte (séparé du WS WebRTC dans call.js)
+// WebSocket pour la messagerie texte
 const textWs = new WebSocket("wss://lightcall-backend.onrender.com");
-
 textWs.onopen = () => console.log("Text WS connecté");
-
 textWs.onmessage = (event) => {
     const data = JSON.parse(event.data);
-    // On reçoit un message texte d'un autre utilisateur
     if (data.type === "text_message" && data.channel_id == currentChannelId) {
         if (String(data.user_id) !== String(currentUserId)) {
             appendMessage(data);
@@ -25,9 +22,10 @@ textWs.onmessage = (event) => {
     }
 };
 
-// ---------------------------------------------
+// =============================================
 // ROUTER
-// ---------------------------------------------
+// =============================================
+
 function showPage(id) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
     const page = document.getElementById(id);
@@ -41,9 +39,7 @@ function navigate(path) {
 
 function router() {
     const path = window.location.pathname;
-    console.log("Router path:", path); // TEMPORAIRE
 
-    // Toujours recharger la sidebar au changement de route
     if (currentUserId) loadServers();
 
     if (path === "/" || path === "") {
@@ -51,14 +47,14 @@ function router() {
         return;
     }
 
-    const serverMatch = path.match(/^\/server\/(\d+)$/);
+    const serverMatch = path.match(/^\/server\/(\d+)\/?$/);
     if (serverMatch) {
         showPage("page-server-view");
         loadServer(serverMatch[1]);
         return;
     }
 
-    const callMatch = path.match(/^\/call\/(\d+)$/);
+    const callMatch = path.match(/^\/call\/(\d+)\/?$/);
     if (callMatch) {
         showPage("page-call");
         if (typeof initCallPage === "function") initCallPage(callMatch[1]);
@@ -70,41 +66,64 @@ function router() {
 
 window.onpopstate = () => router();
 
-// ---------------------------------------------
-// SERVEURS
-// ---------------------------------------------
+// =============================================
+// CHARGER LA LISTE DES SERVEURS (sidebar)
+// =============================================
+
+async function loadServers() {
+    const list = document.getElementById("server-list");
+    if (!list || !currentUserId) return;
+
+    try {
+        const res = await fetch(`${API}/servers/${String(currentUserId)}`);
+        if (!res.ok) return;
+        const servers = await res.json();
+
+        list.innerHTML = "";
+        servers.forEach(server => {
+            const btn = document.createElement("button");
+            btn.className = "menu-item server-item";
+            btn.textContent = server.name;
+            btn.dataset.serverId = server.id;
+            btn.dataset.serverName = server.name;
+            btn.onclick = () => navigate(`/server/${server.id}`);
+            list.appendChild(btn);
+        });
+    } catch (err) {
+        console.error("Erreur loadServers:", err);
+    }
+}
+
+// =============================================
+// CHARGER UN SERVEUR
+// =============================================
+
 async function loadServer(serverId) {
-    // FIX : forcer l'affichage de la page serveur
-    console.log("loadServer appelé avec:", serverId)
     showPage("page-server-view");
 
-    // Réinitialiser le chat
     currentChannelId = null;
     lastMessageUserId = null;
+
     const chatPanel = document.getElementById("chat-panel");
     const chatPlaceholder = document.getElementById("chat-placeholder");
     if (chatPanel) chatPanel.classList.remove("active");
     if (chatPlaceholder) chatPlaceholder.style.display = "";
 
-    // Afficher un état de chargement dans la sidebar
     const textList = document.getElementById("text-channels");
     const voiceList = document.getElementById("voice-channel-list");
-    if (textList) textList.innerHTML = `<div class="chat-loading" style="padding:8px 14px;font-size:0.8rem;">Chargement...</div>`;
+    if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Chargement...</div>`;
     if (voiceList) voiceList.innerHTML = "";
 
     try {
         const res = await fetch(`${API}/servers/${serverId}/full`);
-
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
-
         const data = await res.json();
 
         if (!data || data.error) {
-            if (textList) textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;color:#f04747;">Erreur de chargement</div>`;
+            if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#f04747;">Erreur de chargement</div>`;
             return;
         }
 
-        // Nom du serveur
         const sidebarName = document.getElementById("server-sidebar-name");
         if (sidebarName) sidebarName.textContent = data.name;
 
@@ -112,7 +131,7 @@ async function loadServer(serverId) {
         if (textList) {
             textList.innerHTML = "";
             if (!data.text_channels?.length) {
-                textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
+                textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Aucun salon</div>`;
             } else {
                 data.text_channels.forEach(ch => {
                     const div = document.createElement("div");
@@ -129,7 +148,7 @@ async function loadServer(serverId) {
         if (voiceList) {
             voiceList.innerHTML = "";
             if (!data.voice_channels?.length) {
-                voiceList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
+                voiceList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Aucun salon</div>`;
             } else {
                 data.voice_channels.forEach(ch => {
                     const div = document.createElement("div");
@@ -143,93 +162,29 @@ async function loadServer(serverId) {
 
     } catch (err) {
         console.error("Erreur loadServer:", err);
-
-        // FIX : retry automatique après 2 secondes si le backend dormait
-        if (textList) textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
+        if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
         setTimeout(() => loadServer(serverId), 2000);
     }
 }
 
-// ---------------------------------------------
-// CHARGER UN SERVEUR
-// ---------------------------------------------
-function loadServer(serverId) {
-    // Réinitialiser le chat
-    currentChannelId = null;
-    lastMessageUserId = null;
-    document.getElementById("chat-panel").classList.remove("active");
-    document.getElementById("chat-placeholder").style.display = "";
-
-    fetch(`${API}/servers/${serverId}/full`)
-        .then(res => res.json())
-        .then(data => {
-            if (!data || data.error) {
-                alert("Impossible de charger le serveur.");
-                return;
-            }
-
-            // Nom du serveur dans la sidebar
-            const sidebarName = document.getElementById("server-sidebar-name");
-            if (sidebarName) sidebarName.textContent = data.name;
-
-            // Salons textuels
-            const textList = document.getElementById("text-channels");
-            if (textList) {
-                textList.innerHTML = "";
-                if (!data.text_channels || data.text_channels.length === 0) {
-                    textList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
-                } else {
-                    data.text_channels.forEach(ch => {
-                        const div = document.createElement("div");
-                        div.className = "ch-item";
-                        div.dataset.channelId = ch.id;
-                        div.innerHTML = `<span class="ch-icon">#</span>${ch.name}`;
-                        div.onclick = () => openTextChannel(ch.id, ch.name);
-                        textList.appendChild(div);
-                    });
-                }
-            }
-
-            // Salons vocaux
-            const voiceList = document.getElementById("voice-channel-list");
-            if (voiceList) {
-                voiceList.innerHTML = "";
-                if (!data.voice_channels || data.voice_channels.length === 0) {
-                    voiceList.innerHTML = `<div class="chat-empty" style="padding:8px 14px;font-size:0.8rem;">Aucun salon</div>`;
-                } else {
-                    data.voice_channels.forEach(ch => {
-                        const div = document.createElement("div");
-                        div.className = "ch-item";
-                        div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
-                        div.onclick = () => navigate(`/call/${ch.id}`);
-                        voiceList.appendChild(div);
-                    });
-                }
-            }
-        });
-}
-
-// ---------------------------------------------
+// =============================================
 // CHAT TEXTUEL
-// ---------------------------------------------
+// =============================================
+
 function openTextChannel(channelId, channelName) {
     currentChannelId = channelId;
     lastMessageUserId = null;
 
-    // Header
     document.getElementById("chat-header-name").textContent = channelName;
     document.getElementById("chat-input").placeholder = `Message #${channelName}`;
 
-    // Highlight canal actif
     document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
     const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
     if (activeItem) activeItem.classList.add("active");
 
-    // Afficher le panneau
     document.getElementById("chat-placeholder").style.display = "none";
     document.getElementById("chat-panel").classList.add("active");
 
-    // Charger les messages
     loadMessages(channelId);
 }
 
@@ -243,12 +198,10 @@ async function loadMessages(channelId) {
         const messages = await res.json();
 
         messagesDiv.innerHTML = "";
-
         if (!messages.length) {
             messagesDiv.innerHTML = `<div class="chat-empty">Aucun message pour le moment.<br>Sois le premier à écrire !</div>`;
             return;
         }
-
         messages.forEach(msg => appendMessage(msg));
         scrollToBottom();
 
@@ -262,7 +215,6 @@ function appendMessage(msg) {
     const messagesDiv = document.getElementById("chat-messages");
     if (!messagesDiv) return;
 
-    // Retirer le message "vide" si présent
     const emptyMsg = messagesDiv.querySelector(".chat-empty");
     if (emptyMsg) emptyMsg.remove();
 
@@ -286,17 +238,14 @@ function appendMessage(msg) {
             <div class="chat-text">${escapeHtml(msg.content)}</div>
         </div>
     `;
-
     messagesDiv.appendChild(div);
 }
 
 async function sendMessage() {
     if (!currentChannelId || !currentUserId) return;
-
     const input = document.getElementById("chat-input");
     const content = input.value.trim();
     if (!content) return;
-
     input.value = "";
 
     try {
@@ -306,21 +255,13 @@ async function sendMessage() {
             body: JSON.stringify({ channel_id: currentChannelId, user_id: currentUserId, content })
         });
         const msg = await res.json();
-
-        if (msg.error) { console.error(msg.error); return; }
-
+        if (msg.error) return;
         appendMessage(msg);
         scrollToBottom();
 
-        // Notifier les autres via WS
         if (textWs.readyState === WebSocket.OPEN) {
-            textWs.send(JSON.stringify({
-                type: "text_message",
-                channel_id: currentChannelId,
-                ...msg
-            }));
+            textWs.send(JSON.stringify({ type: "text_message", channel_id: currentChannelId, ...msg }));
         }
-
     } catch (err) {
         console.error("Erreur envoi message:", err);
     }
@@ -331,18 +272,10 @@ function scrollToBottom() {
     if (div) div.scrollTop = div.scrollHeight;
 }
 
-// Entrée → envoyer
-document.addEventListener("DOMContentLoaded", () => {
-    const input = document.getElementById("chat-input");
-    const sendBtn = document.getElementById("chat-send-btn");
-
-    if (input) input.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
-    if (sendBtn) sendBtn.addEventListener("click", sendMessage);
-});
-
-// ---------------------------------------------
+// =============================================
 // UTILITAIRES
-// ---------------------------------------------
+// =============================================
+
 function escapeHtml(text) {
     const d = document.createElement("div");
     d.appendChild(document.createTextNode(text));
@@ -356,9 +289,41 @@ function stringToColor(str) {
     return colors[Math.abs(hash) % colors.length];
 }
 
-// ---------------------------------------------
+// =============================================
+// AUTH UI
+// =============================================
+
+function updateAuthUI() {
+    const loginBtn = document.querySelector(".login-btn");
+    const signupBtn = document.querySelector(".signup-btn");
+    const logoutBtn = document.getElementById("logout-btn");
+    if (currentUserId) {
+        if (loginBtn) loginBtn.style.display = "none";
+        if (signupBtn) signupBtn.style.display = "none";
+        if (logoutBtn) logoutBtn.style.display = "block";
+    } else {
+        if (loginBtn) loginBtn.style.display = "block";
+        if (signupBtn) signupBtn.style.display = "block";
+        if (logoutBtn) logoutBtn.style.display = "none";
+    }
+}
+
+async function loadUserProfile() {
+    if (!currentUserId) return;
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}`);
+        const data = await res.json();
+        const userInfo = document.getElementById("user-info");
+        if (userInfo && data.username) userInfo.textContent = data.username;
+    } catch (err) {
+        console.log("Impossible de charger le profil");
+    }
+}
+
+// =============================================
 // MENU CLIC DROIT SERVEUR
-// ---------------------------------------------
+// =============================================
+
 const contextMenu = document.getElementById("server-context-menu");
 let selectedServerId = null;
 let selectedServerName = null;
@@ -425,69 +390,69 @@ if (confirmRename) confirmRename.onclick = () => {
 const renameInput = document.getElementById("rename-server-input");
 if (renameInput) renameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmRename.click(); });
 
-// ---------------------------------------------
+// =============================================
 // CRÉER / REJOINDRE SERVEUR
-// ---------------------------------------------
-document.addEventListener("DOMContentLoaded", () => {
-    const openCreate = document.getElementById("open-create-server");
-    const cancelCreate = document.getElementById("cancel-create-server");
-    const confirmCreate = document.getElementById("confirm-create-server");
-    const serverNameInput = document.getElementById("server-name-input");
+// =============================================
 
-    if (openCreate) openCreate.onclick = () => {
-        if (!currentUserId) return alert("Connecte-toi pour créer un serveur.");
-        document.getElementById("create-server-popup").classList.remove("hidden");
-    };
-    if (cancelCreate) cancelCreate.onclick = () => document.getElementById("create-server-popup").classList.add("hidden");
-    if (confirmCreate) confirmCreate.onclick = () => {
-        const name = serverNameInput.value.trim();
-        if (!currentUserId) return alert("Connecte-toi d'abord.");
-        if (!name) return alert("Entre un nom de serveur !");
-        fetch(`${API}/servers/create`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ name, owner_id: currentUserId })
-        }).then(res => res.json()).then(data => {
-            alert("Serveur créé ! Code : " + data.invite_code);
-            document.getElementById("create-server-popup").classList.add("hidden");
-            serverNameInput.value = "";
-            loadServers();
-            navigate("/");
-        });
-    };
-    if (serverNameInput) serverNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmCreate.click(); });
+const openCreate = document.getElementById("open-create-server");
+const cancelCreate = document.getElementById("cancel-create-server");
+const confirmCreate = document.getElementById("confirm-create-server");
+const serverNameInput = document.getElementById("server-name-input");
 
-    const openJoin = document.getElementById("open-join-server");
-    const cancelJoin = document.getElementById("cancel-join-server");
-    const confirmJoin = document.getElementById("confirm-join-server");
-    const joinInput = document.getElementById("join-server-input");
+if (openCreate) openCreate.onclick = () => {
+    if (!currentUserId) return alert("Connecte-toi pour créer un serveur.");
+    document.getElementById("create-server-popup").classList.remove("hidden");
+};
+if (cancelCreate) cancelCreate.onclick = () => document.getElementById("create-server-popup").classList.add("hidden");
+if (confirmCreate) confirmCreate.onclick = () => {
+    const name = serverNameInput.value.trim();
+    if (!currentUserId) return alert("Connecte-toi d'abord.");
+    if (!name) return alert("Entre un nom de serveur !");
+    fetch(`${API}/servers/create`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name, owner_id: currentUserId })
+    }).then(res => res.json()).then(data => {
+        alert("Serveur créé ! Code : " + data.invite_code);
+        document.getElementById("create-server-popup").classList.add("hidden");
+        serverNameInput.value = "";
+        loadServers();
+        navigate("/");
+    });
+};
+if (serverNameInput) serverNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmCreate.click(); });
 
-    if (openJoin) openJoin.onclick = () => {
-        if (!currentUserId) return alert("Connecte-toi pour rejoindre un serveur.");
-        document.getElementById("join-server-popup").classList.remove("hidden");
-    };
-    if (cancelJoin) cancelJoin.onclick = () => document.getElementById("join-server-popup").classList.add("hidden");
-    if (confirmJoin) confirmJoin.onclick = () => {
-        const code = joinInput.value.trim();
-        if (!currentUserId) return alert("Connecte-toi d'abord.");
-        if (!code) return alert("Entre un code d'invitation !");
-        fetch(`${API}/servers/join-by-code`, {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ invite_code: code, user_id: currentUserId })
-        }).then(res => res.json()).then(data => {
-            if (data.error) return alert(data.error);
-            alert("Tu as rejoint : " + data.server_name);
-            document.getElementById("join-server-popup").classList.add("hidden");
-            joinInput.value = "";
-            navigate(`/server/${data.server_id}`);
-        });
-    };
-});
+const openJoin = document.getElementById("open-join-server");
+const cancelJoin = document.getElementById("cancel-join-server");
+const confirmJoin = document.getElementById("confirm-join-server");
+const joinInput = document.getElementById("join-server-input");
 
-// ---------------------------------------------
+if (openJoin) openJoin.onclick = () => {
+    if (!currentUserId) return alert("Connecte-toi pour rejoindre un serveur.");
+    document.getElementById("join-server-popup").classList.remove("hidden");
+};
+if (cancelJoin) cancelJoin.onclick = () => document.getElementById("join-server-popup").classList.add("hidden");
+if (confirmJoin) confirmJoin.onclick = () => {
+    const code = joinInput.value.trim();
+    if (!currentUserId) return alert("Connecte-toi d'abord.");
+    if (!code) return alert("Entre un code d'invitation !");
+    fetch(`${API}/servers/join-by-code`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ invite_code: code, user_id: currentUserId })
+    }).then(res => res.json()).then(data => {
+        if (data.error) return alert(data.error);
+        alert("Tu as rejoint : " + data.server_name);
+        document.getElementById("join-server-popup").classList.add("hidden");
+        joinInput.value = "";
+        navigate(`/server/${data.server_id}`);
+    });
+};
+
+// =============================================
 // SIDEBAR REDIMENSIONNABLE
-// ---------------------------------------------
+// =============================================
+
 const sidebar = document.getElementById("sidebar");
 const resizer = document.getElementById("sidebar-resizer");
 if (sidebar && resizer) {
@@ -497,9 +462,10 @@ if (sidebar && resizer) {
     document.addEventListener("mouseup", () => { isResizing = false; document.body.style.cursor = "default"; document.body.style.userSelect = "auto"; });
 }
 
-// ---------------------------------------------
+// =============================================
 // MENU +
-// ---------------------------------------------
+// =============================================
+
 const plusBtn = document.getElementById("server-plus-btn");
 const plusMenu = document.getElementById("server-plus-menu");
 if (plusBtn && plusMenu) {
@@ -507,42 +473,43 @@ if (plusBtn && plusMenu) {
     document.addEventListener("click", (e) => { if (!plusBtn.contains(e.target) && !plusMenu.contains(e.target)) plusMenu.classList.add("hidden"); });
 }
 
-// ---------------------------------------------
+// =============================================
 // ICÔNE UTILISATEUR
-// ---------------------------------------------
+// =============================================
+
 const userIcon = document.getElementById("user-icon");
 if (userIcon) userIcon.addEventListener("click", () => userIcon.classList.toggle("active"));
 
-// ---------------------------------------------
-// MODALS
-// ---------------------------------------------
-window.addEventListener("DOMContentLoaded", () => {
-    const loginBtn = document.querySelector(".login-btn");
-    const signupBtn = document.querySelector(".signup-btn");
-    if (loginBtn) loginBtn.addEventListener("click", () => document.getElementById("login-modal").style.display = "flex");
-    if (signupBtn) signupBtn.addEventListener("click", () => document.getElementById("signup-modal").style.display = "flex");
+// =============================================
+// MODALS LOGIN / SIGNUP
+// =============================================
 
-    document.querySelectorAll(".close-modal").forEach(btn => {
-        btn.addEventListener("click", () => { const m = btn.closest(".modal"); if (m) m.style.display = "none"; });
-    });
-    document.querySelectorAll(".modal").forEach(modal => {
-        modal.addEventListener("click", (e) => { if (e.target === modal && !window.getSelection().toString()) modal.style.display = "none"; });
-    });
+const loginBtn = document.querySelector(".login-btn");
+const signupBtn = document.querySelector(".signup-btn");
+if (loginBtn) loginBtn.addEventListener("click", () => document.getElementById("login-modal").style.display = "flex");
+if (signupBtn) signupBtn.addEventListener("click", () => document.getElementById("signup-modal").style.display = "flex");
 
-    document.querySelectorAll(".password-wrapper").forEach(wrapper => {
-        const input = wrapper.querySelector(".password-field");
-        const eyeV = wrapper.querySelector(".eye-visible");
-        const eyeH = wrapper.querySelector(".eye-hidden");
-        if (eyeV && eyeH && input) {
-            eyeV.addEventListener("click", () => { input.type = "text"; eyeV.style.display = "none"; eyeH.style.display = "block"; });
-            eyeH.addEventListener("click", () => { input.type = "password"; eyeH.style.display = "none"; eyeV.style.display = "block"; });
-        }
-    });
+document.querySelectorAll(".close-modal").forEach(btn => {
+    btn.addEventListener("click", () => { const m = btn.closest(".modal"); if (m) m.style.display = "none"; });
+});
+document.querySelectorAll(".modal").forEach(modal => {
+    modal.addEventListener("click", (e) => { if (e.target === modal && !window.getSelection().toString()) modal.style.display = "none"; });
 });
 
-// ---------------------------------------------
+document.querySelectorAll(".password-wrapper").forEach(wrapper => {
+    const input = wrapper.querySelector(".password-field");
+    const eyeV = wrapper.querySelector(".eye-visible");
+    const eyeH = wrapper.querySelector(".eye-hidden");
+    if (eyeV && eyeH && input) {
+        eyeV.addEventListener("click", () => { input.type = "text"; eyeV.style.display = "none"; eyeH.style.display = "block"; });
+        eyeH.addEventListener("click", () => { input.type = "password"; eyeH.style.display = "none"; eyeV.style.display = "block"; });
+    }
+});
+
+// =============================================
 // SIGN UP
-// ---------------------------------------------
+// =============================================
+
 const signupSubmit = document.getElementById("signup-submit");
 if (signupSubmit) {
     signupSubmit.addEventListener("click", async () => {
@@ -567,17 +534,20 @@ if (signupSubmit) {
 
         currentUserId = String(data.user_id);
         localStorage.setItem("userId", currentUserId);
-        updateAuthUI(); loadUserProfile();
+        updateAuthUI(); loadUserProfile(); loadServers();
         document.getElementById("signup-modal").style.display = "none";
     });
+
     ["signup-username", "signup-password"].forEach(id => {
-        document.getElementById(id).addEventListener("input", () => { document.getElementById("signup-error").style.display = "none"; });
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", () => { document.getElementById("signup-error").style.display = "none"; });
     });
 }
 
-// ---------------------------------------------
+// =============================================
 // LOGIN
-// ---------------------------------------------
+// =============================================
+
 const loginSubmit = document.getElementById("login-submit");
 if (loginSubmit) {
     loginSubmit.addEventListener("click", async () => {
@@ -612,29 +582,14 @@ if (loginSubmit) {
 
         } catch (err) { console.error("Erreur login:", err); }
     });
+
     ["login-username", "login-password"].forEach(id => {
-        document.getElementById(id).addEventListener("input", () => { document.getElementById("login-error").style.display = "none"; });
+        const el = document.getElementById(id);
+        if (el) el.addEventListener("input", () => { document.getElementById("login-error").style.display = "none"; });
     });
 }
 
-// ---------------------------------------------
-// AUTH UI
-// ---------------------------------------------
-function updateAuthUI() {
-    const loginBtn = document.querySelector(".login-btn");
-    const signupBtn = document.querySelector(".signup-btn");
-    const logoutBtn = document.getElementById("logout-btn");
-    if (currentUserId) {
-        if (loginBtn) loginBtn.style.display = "none";
-        if (signupBtn) signupBtn.style.display = "none";
-        if (logoutBtn) logoutBtn.style.display = "block";
-    } else {
-        if (loginBtn) loginBtn.style.display = "block";
-        if (signupBtn) signupBtn.style.display = "block";
-        if (logoutBtn) logoutBtn.style.display = "none";
-    }
-}
-
+// Logout
 const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) logoutBtn.addEventListener("click", () => {
     currentUserId = null;
@@ -643,20 +598,16 @@ if (logoutBtn) logoutBtn.addEventListener("click", () => {
     navigate("/");
 });
 
-// ---------------------------------------------
-// PROFIL
-// ---------------------------------------------
-async function loadUserProfile() {
-    if (!currentUserId) return;
-    try {
-        const res = await fetch(`${API}/users/${currentUserId}`);
-        const data = await res.json();
-        const userInfo = document.getElementById("user-info");
-        if (userInfo && data.username) userInfo.textContent = data.username;
-    } catch (err) { console.log("Impossible de charger le profil"); }
-}
+// Chat — Entrée pour envoyer
+const chatInput = document.getElementById("chat-input");
+const chatSendBtn = document.getElementById("chat-send-btn");
+if (chatInput) chatInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
+if (chatSendBtn) chatSendBtn.addEventListener("click", sendMessage);
 
-// Scripts en bas du body → DOM déjà prêt, pas besoin de DOMContentLoaded
+// =============================================
+// INITIALISATION — toujours à la toute fin
+// =============================================
+
 router();
 updateAuthUI();
 loadUserProfile();
