@@ -70,12 +70,6 @@ function router() {
 
 window.onpopstate = () => router();
 
-// Scripts en bas du body → DOM déjà prêt, pas besoin de DOMContentLoaded
-router();
-updateAuthUI();
-loadUserProfile();
-if (currentUserId) loadServers();
-
 // ---------------------------------------------
 // SERVEURS
 // ---------------------------------------------
@@ -661,3 +655,9 @@ async function loadUserProfile() {
         if (userInfo && data.username) userInfo.textContent = data.username;
     } catch (err) { console.log("Impossible de charger le profil"); }
 }
+
+// Scripts en bas du body → DOM déjà prêt, pas besoin de DOMContentLoaded
+router();
+updateAuthUI();
+loadUserProfile();
+if (currentUserId) loadServers();
