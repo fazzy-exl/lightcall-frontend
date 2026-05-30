@@ -345,26 +345,70 @@ async function shareScreen() {
     try {
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         const screenTrack = screenStream.getVideoTracks()[0];
+        const userId = localStorage.getItem("userId");
+        const videosDiv = document.getElementById("videos");
 
+        // Ajouter un nouveau tile pour le partage — camera reste intacte
+        addScreenStream(screenStream, userId, videosDiv);
+
+        // Les peers voient le partage à la place de la caméra
         for (const id in peers) {
             const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
             if (sender) sender.replaceTrack(screenTrack);
         }
 
-        const userId = localStorage.getItem("userId");
-        addVideoStream(screenStream, userId);
-
+        // Quand on arrête le partage
         screenTrack.onended = () => {
-            const camTrack = localStream.getVideoTracks()[0];
-            for (const id in peers) {
-                const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
-                if (sender) sender.replaceTrack(camTrack);
+            const screenContainer = document.getElementById("screen_container_" + userId);
+            if (screenContainer) screenContainer.remove();
+
+            // Remettre la caméra pour les peers
+            const camTrack = localStream?.getVideoTracks()[0];
+            if (camTrack) {
+                for (const id in peers) {
+                    const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
+                    if (sender) sender.replaceTrack(camTrack);
+                }
             }
-            addVideoStream(localStream, userId);
         };
+
     } catch (e) {
         console.log("Partage d'écran annulé");
     }
+}
+
+function addScreenStream(stream, userId, videosDiv) {
+    const existing = document.getElementById("screen_container_" + userId);
+    if (existing) existing.remove();
+
+    const container = document.createElement("div");
+    container.id = "screen_container_" + userId;
+    container.className = "video-container";
+    container.style.border = "4px solid #5865f2";
+
+    const label = document.createElement("div");
+    label.style.cssText = `
+        position: absolute; top: 8px; left: 8px;
+        background: rgba(0,0,0,0.6); color: white;
+        padding: 2px 8px; border-radius: 4px;
+        font-size: 12px; z-index: 3;
+    `;
+    label.textContent = "🖥️ Partage d'écran";
+
+    const video = document.createElement("video");
+    video.className = "call-video";
+    video.autoplay = true;
+    video.playsInline = true;
+    video.muted = true;
+
+    container.appendChild(label);
+    container.appendChild(video);
+
+    // FIX : ajouter au DOM D'ABORD, puis assigner le stream
+    if (videosDiv) videosDiv.appendChild(container);
+
+    video.srcObject = stream;
+    video.onloadedmetadata = () => video.play().catch(e => console.error("Erreur play screen:", e));
 }
 
 // ---------------------------------------------

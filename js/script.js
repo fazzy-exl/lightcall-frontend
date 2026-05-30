@@ -350,6 +350,15 @@ async function loadUserProfile() {
     if (!currentUserId) return;
     try {
         const res = await fetch(`${API}/users/${currentUserId}`);
+
+        // Si l'utilisateur n'existe pas → déconnecter
+        if (!res.ok) {
+            currentUserId = null;
+            localStorage.removeItem("userId");
+            updateAuthUI();
+            return;
+        }
+
         const data = await res.json();
         const userInfo = document.getElementById("user-info");
         if (userInfo && data.username) userInfo.textContent = data.username;
@@ -516,8 +525,17 @@ if (plusBtn && plusMenu) {
 // =============================================
 
 const userIcon = document.getElementById("user-icon");
-if (userIcon) userIcon.addEventListener("click", () => userIcon.classList.toggle("active"));
+if (userIcon) {
+    userIcon.addEventListener("click", () => {
+        // Activer les transitions seulement pendant l'animation d'ouverture
+        userIcon.style.transition = "width 0.35s ease, height 0.35s ease, border-radius 0.35s ease, background-color 0.35s ease";        userIcon.classList.toggle("active");
 
+        // Les retirer après l'animation pour éviter le lag au resize
+        setTimeout(() => {
+            userIcon.style.transition = "border-radius 0.35s ease, background-color 0.35s ease, transform 0.15s ease";
+        }, 400);
+    });
+}
 // =============================================
 // MODALS
 // =============================================
@@ -631,6 +649,9 @@ const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) logoutBtn.addEventListener("click", () => {
     currentUserId = null;
     localStorage.removeItem("userId");
+    // FIX : vider le nom affiché
+    const userInfo = document.getElementById("user-info");
+    if (userInfo) userInfo.textContent = "";
     updateAuthUI();
     navigate("/");
 });
@@ -644,6 +665,19 @@ const chatInput = document.getElementById("chat-input");
 const chatSendBtn = document.getElementById("chat-send-btn");
 if (chatInput) chatInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 if (chatSendBtn) chatSendBtn.addEventListener("click", sendMessage);
+
+// =============================================
+// SIDEBAR
+// =============================================
+
+function updateMinWidth() {
+    const sidebar = document.getElementById("sidebar");
+    const bubbleSpace = 320 + 20 + 20; // largeur bulle + marges
+    document.body.style.minWidth = (sidebar.offsetWidth + bubbleSpace) + "px";
+}
+
+updateMinWidth();
+new ResizeObserver(updateMinWidth).observe(document.getElementById("sidebar"));
 
 // =============================================
 // INITIALISATION

@@ -8,16 +8,6 @@
 </head>
 <body>
 
-<div id="user-icon">
-    <img id="user-avatar" src="/images/Casque Transparent.JPEG" alt="avatar">
-    <span id="user-info">LightCall</span>
-    <div id="user-buttons">
-        <button class="user-btn login-btn">Login</button>
-        <button class="user-btn signup-btn">Sign Up</button>
-        <button id="logout-btn" class="user-btn" style="display:none;">Se Déconnecter</button>
-    </div>
-</div>
-
 <!-- SIDEBAR GLOBALE -->
 <div id="sidebar">
     <h1 class="menu-title">LightCall</h1>
@@ -46,6 +36,17 @@
 
 <!-- ZONE PRINCIPALE -->
 <div id="main-content">
+
+    <!-- FIX : bulle maintenant ici, contrainte au main-content -->
+    <div id="user-icon">
+        <img id="user-avatar" src="/images/Casque Transparent.JPEG" alt="avatar">
+        <span id="user-info"></span>
+        <div id="user-buttons">
+            <button class="user-btn login-btn">Login</button>
+            <button class="user-btn signup-btn">Sign Up</button>
+            <button id="logout-btn" class="user-btn" style="display:none;">Se Déconnecter</button>
+        </div>
+    </div>
 
     <!-- PAGE 1 : MENU -->
     <div id="page-menu" class="page active">
