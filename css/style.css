@@ -12,6 +12,10 @@ body {
     background: #111;
     color: white;
     font-family: Arial, sans-serif;
+    user-select: none;
+}
+* {
+    user-select: none;
 }
 button {
     padding: 10px 20px;
@@ -22,6 +26,7 @@ button {
     cursor: pointer;
     background: #333;
     color: white;
+    user-select: none;
 }
 h1 {
     flex: 0 0 auto;
@@ -39,8 +44,8 @@ h1 {
     position: relative;
     padding: 20px;
     width: 350px;
-    min-width: 250px;
-    max-width: 500px;
+    min-width: 280px; /* ← minimum pour que le texte soit toujours visible */
+    max-width: 500px; /* ← maximum pour pas prendre trop de place */
     background: #1e1e1e;
     display: flex;
     flex-direction: column;
@@ -48,18 +53,24 @@ h1 {
     flex-shrink: 0;
     box-sizing: border-box;
     overflow: hidden;
+    user-select: none;
 }
 #sidebar-resizer {
-    width: 6px;
+    width: 12px;
     cursor: ew-resize;
     background: transparent;
     position: absolute;
-    top: 0; right: 0;
+    top: 0;
+    right: -6px;
     height: 100%;
     z-index: 9999;
     user-select: none;
 }
-#sidebar-resizer:hover { background: #555; }
+#sidebar-resizer:hover { background: rgba(85, 85, 85, 0.5); }
+#sidebar-resizer.resizing {
+    background: #555;
+}
+
 #sidebar-footer {
     padding: 6px 10px;
     border-top: 1px solid rgba(255,255,255,0.2);
@@ -197,7 +208,7 @@ h1 {
     display: flex;
     justify-content: center;
     align-items: center;
-    margin: 15px auto 0;
+    margin: 15px auto 15px;
     padding: 0;
     cursor: pointer;
     transition: background 0.2s;
@@ -220,16 +231,6 @@ h1 {
 }
 #server-plus-menu.hidden { display: none; }
 #server-plus-menu .menu-item { padding: 8px 10px; border-radius: 4px; font-size: 0.9rem; }
-#settings-btn {
-    padding: 4px 8px;
-    color: white;
-    cursor: pointer;
-    font-size: 0.9rem;
-    opacity: 0.8;
-    border-radius: 4px;
-    background: none;
-}
-#settings-btn:hover { opacity: 1; background: #2a2a2a; }
 
 /* =====================================================
    PAGE SERVEUR — LAYOUT DISCORD
@@ -250,6 +251,7 @@ h1 {
     flex-shrink: 0;
     overflow: hidden;
     border-right: 1px solid #2a2a2a;
+    user-select: none;
 }
 #server-sidebar-name {
     padding: 16px 14px;
@@ -272,6 +274,9 @@ h1 {
     flex-shrink: 0;
 }
 .ch-item {
+    opacity: 0;
+    transform: translateX(-10px);
+    user-select: none;
     display: flex;
     align-items: center;
     gap: 6px;
@@ -281,25 +286,26 @@ h1 {
     font-size: 0.9rem;
     color: #8e9297;
     cursor: pointer;
-    transition: background 0.1s, color 0.1s;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    transition: background 0.1s, color 0.1s; /* seulement hover */
 }
-.ch-item:hover {
-    background: #2a2d31;
-    color: #dcddde;
+
+.ch-item.visible {
+    animation: chItemIn 0.25s ease forwards;
 }
-.ch-item.active {
-    background: #3a3d42;
-    color: white;
-}
-.ch-item .ch-icon {
-    font-size: 14px;
-    flex-shrink: 0;
-    color: #72767d;
-}
+
+.ch-item:hover { background: #2a2d31; color: #dcddde; }
+.ch-item.active { background: #3a3d42; color: white; }
+.ch-item .ch-icon { font-size: 14px; flex-shrink: 0; color: #72767d; }
 .ch-item.active .ch-icon { color: #fff; }
+
+@keyframes chItemIn {
+    from { opacity: 0; transform: translateX(-10px); }
+    to   { opacity: 1; transform: translateX(0); }
+}
+
 #server-sidebar-footer {
     margin-top: auto;
     padding: 12px;
@@ -439,6 +445,7 @@ h1 {
     color: #dcddde;
     line-height: 1.5;
     word-break: break-word;
+    user-select: text;
 }
 
 /* Groupe de messages consécutifs du même auteur */
@@ -857,26 +864,21 @@ h1 {
 
 
 /* Les items de canaux apparaissent un par un */
-.ch-item {
-    animation: fadeSlideIn 0.2s ease forwards;
+
+
+#toast {
+    position: fixed;
+    bottom: 30px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: #43b581;
+    color: white;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-size: 0.95rem;
+    z-index: 9999;
     opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
 }
-
-@keyframes fadeSlideIn {
-    from {
-        opacity: 0;
-        transform: translateX(-10px);
-    }
-    to {
-        opacity: 1;
-        transform: translateX(0);
-    }
-}
-
-/* Délai progressif pour chaque item */
-.ch-item:nth-child(1) { animation-delay: 0.05s; }
-.ch-item:nth-child(2) { animation-delay: 0.10s; }
-.ch-item:nth-child(3) { animation-delay: 0.15s; }
-.ch-item:nth-child(4) { animation-delay: 0.20s; }
-.ch-item:nth-child(5) { animation-delay: 0.25s; }
-.ch-item:nth-child(6) { animation-delay: 0.30s; }
+#toast.show { opacity: 1; }

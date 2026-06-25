@@ -68,6 +68,11 @@ async function loadServers() {
     const list = document.getElementById("server-list");
     if (!list || !currentUserId) return;
 
+    if (!currentUserId) {
+        list.innerHTML = "";
+        return;
+    }
+
     try {
         const res = await fetch(`${API}/servers/${String(currentUserId)}`);
         if (!res.ok) return;
@@ -128,13 +133,20 @@ async function loadServer(serverId) {
             if (!data.text_channels?.length) {
                 textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Aucun salon</div>`;
             } else {
-                data.text_channels.forEach(ch => {
+                data.text_channels.forEach((ch, index) => {
                     const div = document.createElement("div");
                     div.className = "ch-item";
                     div.dataset.channelId = ch.id;
                     div.innerHTML = `<span class="ch-icon">#</span>${ch.name}`;
                     div.onclick = () => openTextChannel(ch.id, ch.name);
                     textList.appendChild(div);
+
+                    // FIX : double requestAnimationFrame pour forcer l'état invisible d'abord
+                    requestAnimationFrame(() => {
+                        requestAnimationFrame(() => {
+                            setTimeout(() => div.classList.add("visible"), index * 60);
+                        });
+                    });
                 });
             }
         }
@@ -145,14 +157,14 @@ async function loadServer(serverId) {
             if (!data.voice_channels?.length) {
                 voiceList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Aucun salon</div>`;
             } else {
-                data.voice_channels.forEach(ch => {
+                data.voice_channels.forEach((ch, index) => {
                     const div = document.createElement("div");
                     div.className = "ch-item";
                     div.dataset.channelId = ch.id;
                     div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
-                    // FIX : plus de navigate, on reste sur la page serveur
                     div.onclick = () => openVoiceChannel(ch.id, ch.name);
                     voiceList.appendChild(div);
+                    setTimeout(() => div.classList.add("visible"), index * 50);
                 });
             }
         }
@@ -455,17 +467,23 @@ if (confirmCreate) confirmCreate.onclick = () => {
     const name = serverNameInput.value.trim();
     if (!currentUserId) return alert("Connecte-toi d'abord.");
     if (!name) return alert("Entre un nom de serveur !");
+
     fetch(`${API}/servers/create`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, owner_id: currentUserId })
-    }).then(res => res.json()).then(data => {
-        alert("Serveur créé ! Code : " + data.invite_code);
-        document.getElementById("create-server-popup").classList.add("hidden");
-        serverNameInput.value = "";
-        loadServers();
-        navigate("/");
-    });
+    })
+        .then(res => res.json())
+        .then(data => {
+            document.getElementById("create-server-popup").classList.add("hidden");
+            serverNameInput.value = "";
+
+            // FIX : recharger immédiatement sans alert qui bloque
+            loadServers().then(() => {
+                // Naviguer vers le nouveau serveur directement
+                navigate(`/server/${data.server_id}`);
+            });
+        });
 };
 if (serverNameInput) serverNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmCreate.click(); });
 
@@ -504,9 +522,23 @@ const sidebar = document.getElementById("sidebar");
 const resizer = document.getElementById("sidebar-resizer");
 if (sidebar && resizer) {
     let isResizing = false;
-    resizer.addEventListener("mousedown", () => { isResizing = true; document.body.style.cursor = "ew-resize"; document.body.style.userSelect = "none"; });
-    document.addEventListener("mousemove", (e) => { if (!isResizing) return; const w = e.clientX; if (w > 180 && w < 500) sidebar.style.width = w + "px"; });
-    document.addEventListener("mouseup", () => { isResizing = false; document.body.style.cursor = "default"; document.body.style.userSelect = "auto"; });
+    resizer.addEventListener("mousedown", () => {
+        isResizing = true;
+        document.body.style.cursor = "ew-resize";
+        document.body.style.userSelect = "none";
+        resizer.classList.add("resizing");
+    });
+    document.addEventListener("mousemove", (e) => {
+        if (!isResizing) return;
+        const w = e.clientX;
+        if (w > 280 && w < 500) sidebar.style.width = w + "px";
+    });
+    document.addEventListener("mouseup", () => {
+        isResizing = false;
+        document.body.style.cursor = "default";
+        document.body.style.userSelect = "auto";
+        resizer.classList.remove("resizing");
+    });
 }
 
 // =============================================
@@ -588,10 +620,14 @@ if (signupSubmit) {
             return;
         }
 
+        // Succès
         currentUserId = String(data.user_id);
         localStorage.setItem("userId", currentUserId);
-        updateAuthUI(); loadUserProfile(); loadServers();
+        updateAuthUI();
+        loadUserProfile();
+        loadServers();
         document.getElementById("signup-modal").style.display = "none";
+        showToast("Compte créé avec succès ! Bienvenue 🎉");
     });
 
     ["signup-username", "signup-password"].forEach(id => {
@@ -633,8 +669,11 @@ if (loginSubmit) {
 
             currentUserId = String(data.user_id);
             localStorage.setItem("userId", currentUserId);
-            updateAuthUI(); loadUserProfile(); loadServers();
+            updateAuthUI();
+            loadUserProfile();
+            loadServers();
             document.getElementById("login-modal").style.display = "none";
+            showToast("Connecté avec succès !");
 
         } catch (err) { console.error("Erreur login:", err); }
     });
@@ -649,9 +688,11 @@ const logoutBtn = document.getElementById("logout-btn");
 if (logoutBtn) logoutBtn.addEventListener("click", () => {
     currentUserId = null;
     localStorage.removeItem("userId");
-    // FIX : vider le nom affiché
     const userInfo = document.getElementById("user-info");
     if (userInfo) userInfo.textContent = "";
+    // FIX : vider la liste directement
+    const serverList = document.getElementById("server-list");
+    if (serverList) serverList.innerHTML = "";
     updateAuthUI();
     navigate("/");
 });
@@ -678,6 +719,14 @@ function updateMinWidth() {
 
 updateMinWidth();
 new ResizeObserver(updateMinWidth).observe(document.getElementById("sidebar"));
+
+function showToast(message, color = "#43b581") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.style.background = color;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3000);
+}
 
 // =============================================
 // INITIALISATION
