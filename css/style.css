@@ -254,7 +254,7 @@ h1 {
     user-select: none;
 }
 #server-sidebar-name {
-    padding: 16px 14px;
+    padding: 20px;
     font-size: 1rem;
     font-weight: bold;
     color: white;
@@ -300,6 +300,20 @@ h1 {
 .ch-item.active { background: #3a3d42; color: white; }
 .ch-item .ch-icon { font-size: 14px; flex-shrink: 0; color: #72767d; }
 .ch-item.active .ch-icon { color: #fff; }
+.ch-item.active-voice {
+    background: transparent;
+    color: #faa61a;
+    border: 1px solid #faa61a;
+    border-radius: 6px;
+}
+
+.ch-item.active-voice .ch-icon {
+    color: #faa61a;
+}
+
+.ch-item.active-voice:hover {
+    background: rgba(250, 166, 26, 0.1);
+}
 
 @keyframes chItemIn {
     from { opacity: 0; transform: translateX(-10px); }
@@ -370,9 +384,10 @@ h1 {
 /* Header du chat */
 #chat-header {
     display: flex;
+    margin-right: 125px;
     align-items: center;
     gap: 8px;
-    padding: 12px 16px;
+    padding: 1.05rem;
     border-bottom: 1px solid #2a2a2a;
     flex-shrink: 0;
     background: #111;
@@ -572,8 +587,7 @@ h1 {
     position: absolute; inset: 0;
     display: none;
     align-items: center; justify-content: center;
-    background: #1a1a1a; color: #aaa;
-    font-size: 18px; font-weight: bold;
+    background: #1a1a1a;
     z-index: 2; border-radius: 10px;
 }
 .video-container.cam-off .placeholder { display: flex; }
@@ -652,54 +666,60 @@ h1 {
    ICÔNE UTILISATEUR
 ===================================================== */
 #user-icon {
-    z-index: 100;
-    position: absolute; top: 20px; right: 20px;
-    width: 60px; height: 60px;
-    background-color: #4a4a4a; border-radius: 40px;
-    cursor: pointer; padding: 5px;
-    transition:
-            border-radius 0.35s ease,
-            background-color 0.35s ease,
-            transform 0.15s ease;    display: flex; align-items: flex-start; justify-content: flex-start;
+    position: absolute;
+    top: 20px;
+    right: 20px;
+    width: 60px;
+    height: 60px;
+    background-color: #4a4a4a;
+    border-radius: 40px;
+    cursor: pointer;
+    padding: 5px;
+    display: flex;
+    align-items: flex-start;
+    justify-content: flex-start;
     overflow: hidden;
+    z-index: 100;
+    transition: width 0.4s cubic-bezier(0.34, 1.2, 0.64, 1),
+    height 0.4s cubic-bezier(0.34, 1.2, 0.64, 1),
+    border-radius 0.4s cubic-bezier(0.34, 1.2, 0.64, 1),
+    background-color 0.3s ease;
 }
+
 #user-icon.active {
     width: 320px;
-    max-width: calc(100% - 50px); /* ← jamais plus large que main-content - marges */
     height: 300px;
     border-radius: 56px;
     background-color: #6a6a6a;
-    transform: none;
-    overflow: hidden;
 }
+
 #user-icon:hover {
-    transform: scale(1.1);
     background-color: #6a6a6a;
 }
-#user-icon.active:hover {
-    transform: none;
-}
+
 #user-avatar {
     position: absolute;
     top: 5px;
     left: 5px;
-    width: 60px;
-    height: 60px;
+    width: 100px;
+    height: 100px;
     border-radius: 50%;
     object-fit: cover;
     pointer-events: none;
-    transition: width 0.3s ease, height 0.3s ease;
+    transform: scale(0.6);
+    transform-origin: top left;
+    transition: transform 0.4s cubic-bezier(0.34, 1.2, 0.64, 1);
 }
+
 #user-icon.active #user-avatar {
-    width: min(110px, 32%);
-    height: auto;
-    aspect-ratio: 1 / 1; /* ← force le carré, X et Y bougent ensemble */
+    transform: scale(1);
 }
+
 #user-info {
     position: absolute;
-    left: 45%;
-    top: 16%; /* ← était 50px fixe, maintenant proportionnel */
-    width: 50%;
+    left: 140px;
+    top: 50px;
+    width: 150px;
     text-align: center;
     color: white;
     font-size: 22px;
@@ -707,34 +727,45 @@ h1 {
     pointer-events: none;
     white-space: nowrap;
     overflow: hidden;
-    clip-path: inset(0 100% 0 0);
-    transition: clip-path 0.35s ease;
+    opacity: 0;
+    transition: opacity 0.25s ease;
 }
+
 #user-icon.active #user-info {
-    clip-path: inset(0 0 0 0);
+    opacity: 1;
+    transition-delay: 0.15s;
 }
+
 #user-buttons {
     position: absolute;
-    bottom: 20px; left: 50%;
+    bottom: 20px;
+    left: 50%;
     transform: translateX(-50%);
-    display: flex; gap: 15px;
+    display: flex;
+    gap: 15px;
     opacity: 0;
     pointer-events: none;
-    transition: opacity 0.35s ease;
+    transition: opacity 0.25s ease;
 }
+
 #user-icon.active #user-buttons {
     opacity: 1;
     pointer-events: auto;
-    transition-delay: 0.10s;
+    transition-delay: 0.2s;
 }
+
 .user-btn {
     padding: 10px 20px;
-    border-radius: 8px; border: none;
+    border-radius: 8px;
+    border: none;
     cursor: pointer;
     font-size: 16px;
     font-weight: 600;
     margin: 0;
-    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.user-btn:hover {
+    transform: scale(1.05);
 }
 .login-btn {
     background-color: #ffffff;
@@ -798,10 +829,12 @@ h1 {
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 12px 16px;
+    padding: 1.15rem;
+    margin-right: 125px;
     border-bottom: 1px solid #2a2a2a;
     background: #111;
     flex-shrink: 0;
+    position: relative;
 }
 
 .call-panel-icon {
@@ -837,7 +870,7 @@ h1 {
     gap: 10px;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     place-items: center;
-    padding: 20px;
+    padding: 40px 20px 20px 20px;
     box-sizing: border-box;
     min-height: 0;
 }
@@ -882,3 +915,310 @@ h1 {
     pointer-events: none;
 }
 #toast.show { opacity: 1; }
+
+/* Animation caméra — points rebondissants */
+.cam-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: #1a1a1a;
+    z-index: 5;
+    border-radius: 10px;
+}
+
+.cam-dots {
+    display: flex;
+    gap: 6px;
+    align-items: center;
+}
+
+.cam-dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #d68910;
+    animation: dot-bounce 1s ease-in-out infinite;
+}
+
+.cam-dot:nth-child(2) { animation-delay: 0.15s; }
+.cam-dot:nth-child(3) { animation-delay: 0.30s; }
+
+@keyframes dot-bounce {
+    0%, 100% { transform: translateY(0); opacity: 0.4; }
+    50% { transform: translateY(-8px); opacity: 1; }
+}
+
+#toggleCamBtn, #toggleMicBtn, #shareBtn, #call-leave-btn {
+    display: none;
+}
+
+.call-active #toggleCamBtn,
+.call-active #toggleMicBtn,
+.call-active #shareBtn,
+.call-active #call-leave-btn {
+    display: block;
+}
+
+#mini-call-bar {
+    background: #1e3a2a;
+    border-top: 1px solid #2a2a2a;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 10px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 0.85rem;
+    color: #43b581;
+    flex-shrink: 0;
+}
+
+#mini-call-bar.hidden {
+    display: none !important;
+}
+
+#mini-call-return {
+    margin-left: auto;
+    padding: 4px 10px;
+    font-size: 0.8rem;
+    background: #43b581;
+    color: white;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    margin: 0;
+}
+
+#mini-call-return:hover {
+    background: #3ca374;
+}
+
+/* =====================================================
+   PAGE PARAMÈTRES — style Discord
+===================================================== */
+
+#page-settings.active {
+    flex-direction: row;
+    align-items: stretch;
+    padding: 0;
+}
+
+#settings-sidebar {
+    width: 220px;
+    min-width: 180px;
+    background: #1a1a1a;
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    border-right: 1px solid #2a2a2a;
+    padding-top: 16px;
+}
+
+.s-tab {
+    padding: 10px 18px;
+    font-size: 0.9rem;
+    color: #8e9297;
+    cursor: pointer;
+    margin: 1px 8px;
+    border-radius: 6px;
+}
+
+.s-tab:hover:not(.active) {
+    background: #2a2d31;
+    color: #dcddde;
+}
+
+.s-tab.active {
+    background: #3a3d42;
+    color: white;
+}
+
+#settings-sidebar-footer {
+    margin-top: auto;
+    padding: 12px;
+    border-top: 1px solid #2a2a2a;
+}
+
+#settings-content {
+    flex: 1;
+    overflow-y: auto;
+    padding: 32px 40px;
+    color: white;
+}
+
+.s-panel { display: none; max-width: 480px; }
+.s-panel.active { display: block; }
+
+.s-title {
+    font-size: 1.3rem;
+    font-weight: bold;
+    margin: 0 0 24px;
+}
+
+.s-avatar-row {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 20px;
+}
+
+#settings-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #5865f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 1.3rem;
+    flex-shrink: 0;
+}
+
+.s-sub {
+    font-size: 0.78rem;
+    color: #72767d;
+    margin-top: 2px;
+}
+
+.s-section {
+    border-top: 1px solid #2a2a2a;
+    padding-top: 16px;
+    margin-top: 16px;
+}
+
+.s-section-title {
+    font-size: 0.85rem;
+    font-weight: bold;
+    color: #dcddde;
+    margin: 0 0 10px;
+}
+
+.s-section input {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 8px;
+    border-radius: 6px;
+    border: none;
+    background: #2a2d31;
+    color: white;
+    box-sizing: border-box;
+    font-size: 0.9rem;
+}
+
+.s-error {
+    color: #f04747;
+    font-size: 0.8rem;
+    margin: 0 0 8px;
+    display: none;
+}
+
+.s-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    border-top: 1px solid #2a2a2a;
+    padding: 16px 0;
+}
+
+.s-label {
+    font-size: 0.9rem;
+    color: #dcddde;
+}
+
+.color-row {
+    display: flex;
+    gap: 8px;
+}
+
+.color-dot {
+    width: 24px;
+    height: 24px;
+    border-radius: 50%;
+    cursor: pointer;
+    border: 2px solid transparent;
+}
+
+.color-dot.selected {
+    border-color: white;
+}
+
+.s-select {
+    width: 100%;
+    padding: 10px;
+    border-radius: 6px;
+    border: none;
+    background: #2a2d31;
+    color: white;
+    font-size: 0.9rem;
+}
+
+.toggle {
+    width: 36px;
+    height: 20px;
+    border-radius: 10px;
+    background: #444;
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+
+.toggle.on { background: #43b581; }
+
+.toggle-dot {
+    width: 16px;
+    height: 16px;
+    border-radius: 50%;
+    background: white;
+    position: absolute;
+    top: 2px;
+    left: 2px;
+    transition: left 0.15s ease;
+}
+
+.toggle.on .toggle-dot { left: 18px; }
+
+/* Avatar uploadable dans les paramètres */
+#settings-avatar-wrapper {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    flex-shrink: 0;
+    position: relative;
+    overflow: hidden;
+}
+
+#settings-avatar {
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    background: #5865f2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    color: white;
+    font-size: 1.3rem;
+    background-size: cover;
+    background-position: center;
+}
+
+#settings-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    background: rgba(0,0,0,0.6);
+    color: white;
+    font-size: 10px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+    border-radius: 50%;
+}
+
+#settings-avatar-wrapper:hover #settings-avatar-overlay {
+    opacity: 1;
+}

@@ -46,17 +46,26 @@ async function startCall(channelId, videosDiv) {
     const joinBtn = document.getElementById("joinBtn");
     joinBtn.disabled = true;
 
-    const ok = await resetCamera();
+    // FIX : demander seulement le micro, pas la caméra
+    const ok = await resetCamera(false); // false = caméra fermée
     if (!ok) {
-        alert("Impossible d'accéder à la caméra ou au micro.");
+        alert("Impossible d'accéder au micro.");
         joinBtn.disabled = false;
         return;
     }
 
+    // FIX : afficher les boutons et cacher "Rejoindre"
+    document.getElementById("call-panel").classList.add("call-active");
+    joinBtn.style.display = "none";
+
     const userId = localStorage.getItem("userId");
     addVideoStream(localStream, userId, videosDiv);
 
-    // Détection voix locale
+    // FIX : marquer la caméra comme fermée visuellement
+    const container = document.getElementById("video_container_" + userId);
+    if (container) container.classList.add("cam-off");
+    cameraEnabled = false;
+
     setTimeout(() => {
         const video = document.getElementById("video_" + userId);
         if (video) detectSpeaking(localStream, video);
@@ -202,8 +211,16 @@ function addVideoStream(stream, id, videosDiv) {
 
         const placeholder = document.createElement("div");
         placeholder.className = "placeholder";
-        placeholder.innerText = "Caméra désactivée";
         placeholder.id = "placeholder_" + id;
+
+        // FIX : utiliser l'avatar au lieu du texte
+        const avatarImg = document.createElement("img");
+        avatarImg.src = "/images/Casque Transparent.JPEG";
+        avatarImg.style.width = "100px";
+        avatarImg.style.height = "100px";
+        avatarImg.style.borderRadius = "50%";
+        avatarImg.style.objectFit = "cover";
+        placeholder.appendChild(avatarImg);
 
         const video = document.createElement("video");
         video.id = "video_" + id;
@@ -227,7 +244,10 @@ function addVideoStream(stream, id, videosDiv) {
         video.play();
         if (id === userId) {
             const ph = document.getElementById("placeholder_" + id);
-            if (ph) ph.style.display = "none";
+            // FIX : ne cacher le placeholder que si la caméra est vraiment activée
+            if (ph && typeof cameraEnabled !== "undefined" && cameraEnabled) {
+                ph.style.display = "none";
+            }
         }
     };
 }
@@ -262,35 +282,53 @@ async function toggleCamera() {
     if (!container || !videoElement) return;
 
     if (cameraEnabled) {
-        // Fermer complètement la caméra
         localStream.getVideoTracks().forEach(t => t.stop());
         videoElement.srcObject = null;
         container.classList.add("cam-off");
         cameraEnabled = false;
 
     } else {
-        // Rouvrir la caméra
+        // Afficher l'animation
+        const spinner = document.createElement("div");
+        spinner.className = "cam-loading";
+        spinner.id = "cam-spinner-" + userId;
+        spinner.innerHTML = `
+            <div class="cam-dots">
+                <div class="cam-dot"></div>
+                <div class="cam-dot"></div>
+                <div class="cam-dot"></div>
+            </div>
+        `;
+        container.appendChild(spinner);
+
         try {
             const newStream = await navigator.mediaDevices.getUserMedia({
                 video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30 } }
             });
             const newTrack = newStream.getVideoTracks()[0];
 
-            // Retirer l'ancienne piste et ajouter la nouvelle
             localStream.getVideoTracks().forEach(t => localStream.removeTrack(t));
             localStream.addTrack(newTrack);
             videoElement.srcObject = localStream;
 
-            // Mettre à jour tous les peers WebRTC
             for (const id in peers) {
                 const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
                 if (sender) await sender.replaceTrack(newTrack);
             }
 
+            // Retirer le spinner quand la vidéo est prête
+            videoElement.onloadedmetadata = () => {
+                videoElement.play();
+                const sp = document.getElementById("cam-spinner-" + userId);
+                if (sp) sp.remove();
+            };
+
             container.classList.remove("cam-off");
             cameraEnabled = true;
 
         } catch (e) {
+            const sp = document.getElementById("cam-spinner-" + userId);
+            if (sp) sp.remove();
             console.error("Impossible de rouvrir la caméra :", e);
             alert("Impossible d'accéder à la caméra.");
         }
@@ -299,6 +337,12 @@ async function toggleCamera() {
 
 // Appelée quand on quitte l'appel
 function stopCall() {
+    document.getElementById("call-panel").classList.remove("call-active");
+    const joinBtn = document.getElementById("joinBtn");
+    if (joinBtn) {
+        joinBtn.style.display = "block";
+        joinBtn.disabled = false;
+    }
     // Fermer tous les tracks (caméra + micro)
     if (localStream) {
         localStream.getTracks().forEach(t => t.stop());
@@ -324,10 +368,10 @@ function stopCall() {
     console.log("Appel terminé, caméra et micro fermés.");
 }
 
-async function resetCamera() {
+async function resetCamera(withVideo = true) {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
-            video: { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, min: 24 } },
+            video: withVideo ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, min: 24 } } : false,
             audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
         });
         localStream = stream;
@@ -341,40 +385,65 @@ async function resetCamera() {
 // ---------------------------------------------
 // 6) Partage d'écran
 // ---------------------------------------------
+let screenSharing = false;
+let currentScreenTrack = null;
+
 async function shareScreen() {
+    const shareBtn = document.getElementById("shareBtn");
+
+    if (screenSharing) {
+        // FIX : arrêter le partage
+        stopScreenShare();
+        return;
+    }
+
     try {
         const screenStream = await navigator.mediaDevices.getDisplayMedia({ video: true });
         const screenTrack = screenStream.getVideoTracks()[0];
+        currentScreenTrack = screenTrack;
         const userId = localStorage.getItem("userId");
         const videosDiv = document.getElementById("videos");
 
-        // Ajouter un nouveau tile pour le partage — camera reste intacte
         addScreenStream(screenStream, userId, videosDiv);
 
-        // Les peers voient le partage à la place de la caméra
         for (const id in peers) {
             const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
             if (sender) sender.replaceTrack(screenTrack);
         }
 
-        // Quand on arrête le partage
-        screenTrack.onended = () => {
-            const screenContainer = document.getElementById("screen_container_" + userId);
-            if (screenContainer) screenContainer.remove();
+        screenSharing = true;
+        shareBtn.textContent = "Arrêter le partage";
+        shareBtn.style.background = "#d9534f";
 
-            // Remettre la caméra pour les peers
-            const camTrack = localStream?.getVideoTracks()[0];
-            if (camTrack) {
-                for (const id in peers) {
-                    const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
-                    if (sender) sender.replaceTrack(camTrack);
-                }
-            }
-        };
+        // Si l'utilisateur arrête via le bouton natif du navigateur
+        screenTrack.onended = () => stopScreenShare();
 
     } catch (e) {
         console.log("Partage d'écran annulé");
     }
+}
+
+function stopScreenShare() {
+    const shareBtn = document.getElementById("shareBtn");
+    const userId = localStorage.getItem("userId");
+
+    const screenContainer = document.getElementById("screen_container_" + userId);
+    if (screenContainer) screenContainer.remove();
+
+    if (currentScreenTrack) {
+        currentScreenTrack.stop();
+        currentScreenTrack = null;
+    }
+
+    const camTrack = localStream?.getVideoTracks()[0];
+    for (const id in peers) {
+        const sender = peers[id].pc.getSenders().find(s => s.track && s.track.kind === "video");
+        if (sender) sender.replaceTrack(camTrack || null);
+    }
+
+    screenSharing = false;
+    shareBtn.textContent = "Partager";
+    shareBtn.style.background = "";
 }
 
 function addScreenStream(stream, userId, videosDiv) {

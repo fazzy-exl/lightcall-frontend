@@ -44,6 +44,7 @@
         <div id="user-buttons">
             <button class="user-btn login-btn">Login</button>
             <button class="user-btn signup-btn">Sign Up</button>
+            <button id="settings-btn" class="user-btn" style="display:none;">Paramètres</button>
             <button id="logout-btn" class="user-btn" style="display:none;">Se Déconnecter</button>
         </div>
     </div>
@@ -65,6 +66,12 @@
             <div id="text-channels"></div>
             <div class="ch-section">Salons vocaux</div>
             <div id="voice-channel-list"></div>
+            <!-- FIX : mini indicateur d'appel actif -->
+            <div id="mini-call-bar" class="hidden">
+                <span>🔊</span>
+                <span id="mini-call-name"></span>
+                <button id="mini-call-return">↩ Retourner</button>
+            </div>
             <div id="server-sidebar-footer">
                 <button class="back-btn" onclick="navigate('/')">← Retour</button>
             </div>
@@ -97,14 +104,95 @@
                 <div id="call-panel-header">
                     <span class="call-panel-icon">🔊</span>
                     <span id="call-panel-name">général</span>
-                    <button id="call-leave-btn">Quitter le salon</button>
                 </div>
                 <div id="videos"></div>
                 <div id="controls">
-                    <button id="joinBtn">Rejoindre</button>
+                    <button id="joinBtn" style="background:#43b581;">Rejoindre</button>
                     <button id="toggleCamBtn">Caméra ON/OFF</button>
                     <button id="toggleMicBtn">Micro ON/OFF</button>
                     <button id="shareBtn">Partager</button>
+                    <button id="call-leave-btn" style="background:#d9534f;">Quitter le salon</button>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <!-- PAGE PARAMÈTRES — style Discord -->
+    <div id="page-settings" class="page">
+        <div id="settings-sidebar">
+            <div class="s-tab active" data-tab="account">👤 Mon compte</div>
+            <div class="s-tab" data-tab="appearance">🎨 Apparence</div>
+            <div class="s-tab" data-tab="av">🎙️ Audio et vidéo</div>
+            <div class="s-tab" data-tab="notifications">🔔 Notifications</div>
+            <div id="settings-sidebar-footer">
+                <button class="back-btn" onclick="closeSettings()">← Retour</button>
+            </div>
+        </div>
+
+        <div id="settings-content">
+
+            <div class="s-panel active" data-panel="account">
+                <h2 class="s-title">Mon compte</h2>
+                <div class="s-avatar-row">
+                    <div id="settings-avatar-wrapper" style="position:relative;cursor:pointer;">
+                        <div id="settings-avatar">?</div>
+                        <input id="settings-avatar-input" type="file" accept="image/*" style="display:none;">
+                        <div id="settings-avatar-overlay">Changer</div>
+                    </div>
+                    <div>
+                        <div id="settings-username" style="font-weight:bold;"></div>
+                        <div id="settings-created" class="s-sub"></div>
+                    </div>
+                </div>
+                <div class="s-section">
+                    <p class="s-section-title">Changer le mot de passe</p>
+                    <input id="settings-current-password" type="password" placeholder="Mot de passe actuel" autocomplete="new-password" name="not-autofill-current">
+                    <input id="settings-new-password" type="password" placeholder="Nouveau mot de passe" autocomplete="new-password" name="not-autofill-new">
+                    <p id="settings-password-error" class="s-error"></p>
+                    <button id="settings-password-submit" class="special-btn" style="width:auto;padding:8px 16px;">Mettre à jour</button>
+                </div>
+                <div class="s-row">
+                    <div>
+                        <div class="s-label">Se déconnecter</div>
+                        <div class="s-sub">Tu devras te reconnecter pour continuer.</div>
+                    </div>
+                    <button id="settings-logout" class="special-btn cancel" style="width:auto;padding:8px 16px;background:#d9534f;">Se déconnecter</button>
+                </div>
+            </div>
+
+            <div class="s-panel" data-panel="appearance">
+                <h2 class="s-title">Apparence</h2>
+                <div class="s-row">
+                    <div>
+                        <div class="s-label">Couleur de pseudo</div>
+                        <div class="s-sub">S'affiche dans les messages texte.</div>
+                    </div>
+                    <div id="settings-color-row" class="color-row"></div>
+                </div>
+            </div>
+
+            <div class="s-panel" data-panel="av">
+                <h2 class="s-title">Audio et vidéo</h2>
+                <div class="s-section">
+                    <p class="s-section-title">Caméra</p>
+                    <select id="settings-camera-select" class="s-select"></select>
+                </div>
+                <div class="s-section">
+                    <p class="s-section-title">Microphone</p>
+                    <select id="settings-mic-select" class="s-select"></select>
+                </div>
+                <p class="s-sub" style="margin-top:8px;">Ces préférences seront utilisées la prochaine fois que tu rejoins un appel.</p>
+            </div>
+
+            <div class="s-panel" data-panel="notifications">
+                <h2 class="s-title">Notifications</h2>
+                <div class="s-row">
+                    <div>
+                        <div class="s-label">Notifications de messages</div>
+                        <div class="s-sub">Recevoir une alerte visuelle pour chaque message.</div>
+                    </div>
+                    <div id="toggle-notifications" class="toggle"><div class="toggle-dot"></div></div>
                 </div>
             </div>
 

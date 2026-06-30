@@ -181,6 +181,11 @@ async function loadServer(serverId) {
 // =============================================
 
 function openVoiceChannel(channelId, channelName) {
+    // FIX : ne pas rejoindre si déjà dans ce salon
+    if (document.getElementById("call-panel").classList.contains("call-active") &&
+        document.getElementById("call-panel-name").textContent === channelName) {
+        return;
+    }
     // Cacher le chat textuel, afficher le panneau d'appel
     document.getElementById("chat-placeholder").style.display = "none";
     document.getElementById("chat-panel").classList.remove("active");
@@ -191,27 +196,16 @@ function openVoiceChannel(channelId, channelName) {
     const videos = document.getElementById("videos");
     if (videos) videos.innerHTML = "";
 
-    // Mettre en évidence le salon vocal actif
+    // FIX : orange immédiatement au clic
     document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
     const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
     if (activeItem) activeItem.classList.add("active");
 
-    // Lancer la page d'appel
     if (typeof initCallPage === "function") initCallPage(channelId);
-}
 
-function leaveCall() {
-    const callPanel = document.getElementById("call-panel");
-    if (!callPanel || !callPanel.classList.contains("active")) return;
-
-    // Arrêter le call proprement
-    if (typeof stopCall === "function") stopCall();
-
-    callPanel.classList.remove("active");
-    document.getElementById("chat-placeholder").style.display = "";
-
-    // Retirer le highlight des salons vocaux
-    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
+    setTimeout(() => {
+        if (typeof startCall === "function") startCall(channelId, videos);
+    }, 100);
 }
 
 // =============================================
@@ -219,8 +213,17 @@ function leaveCall() {
 // =============================================
 
 function openTextChannel(channelId, channelName) {
-    // Fermer le call si ouvert
-    leaveCall();
+    // FIX : si call actif, cacher le panneau sans quitter
+    const callPanel = document.getElementById("call-panel");
+    if (callPanel && callPanel.classList.contains("call-active")) {
+        callPanel.style.display = "none";
+        const miniBar = document.getElementById("mini-call-bar");
+        const miniName = document.getElementById("mini-call-name");
+        if (miniBar) miniBar.classList.remove("hidden");
+        if (miniName) miniName.textContent = document.getElementById("call-panel-name").textContent;
+    } else {
+        leaveCall();
+    }
 
     currentChannelId = channelId;
     lastMessageUserId = null;
@@ -237,6 +240,41 @@ function openTextChannel(channelId, channelName) {
 
     loadMessages(channelId);
 }
+
+// Bouton retourner dans l'appel
+const miniCallReturn = document.getElementById("mini-call-return");
+if (miniCallReturn) miniCallReturn.addEventListener("click", () => {
+    // Fermer le chat
+    document.getElementById("chat-panel").classList.remove("active");
+    document.getElementById("chat-placeholder").style.display = "none";
+
+    // Réafficher le call
+    const callPanel = document.getElementById("call-panel");
+    if (callPanel) callPanel.style.display = "";
+
+    // Cacher le mini bar
+    document.getElementById("mini-call-bar").classList.add("hidden");
+
+    // FIX : remettre le highlight sur le salon vocal actif
+    const channelName = document.getElementById("call-panel-name").textContent;
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
+    document.querySelectorAll(".ch-item").forEach(el => {
+        if (el.textContent.trim().includes(channelName)) el.classList.add("active-voice");
+    });
+});
+
+function leaveCall() {
+    const callPanel = document.getElementById("call-panel");
+    if (!callPanel) return;
+    if (!callPanel.classList.contains("active") && callPanel.style.display !== "none") return;
+
+    if (typeof stopCall === "function") stopCall();
+
+    callPanel.classList.remove("active");
+    callPanel.style.display = "";
+    document.getElementById("chat-placeholder").style.display = "";
+    document.getElementById("mini-call-bar").classList.add("hidden");
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));}
 
 async function loadMessages(channelId) {
     const messagesDiv = document.getElementById("chat-messages");
@@ -347,14 +385,18 @@ function updateAuthUI() {
     const loginBtn = document.querySelector(".login-btn");
     const signupBtn = document.querySelector(".signup-btn");
     const logoutBtn = document.getElementById("logout-btn");
+    const settingsBtn = document.getElementById("settings-btn");
+
     if (currentUserId) {
         if (loginBtn) loginBtn.style.display = "none";
         if (signupBtn) signupBtn.style.display = "none";
         if (logoutBtn) logoutBtn.style.display = "block";
+        if (settingsBtn) settingsBtn.style.display = "block";
     } else {
         if (loginBtn) loginBtn.style.display = "block";
         if (signupBtn) signupBtn.style.display = "block";
         if (logoutBtn) logoutBtn.style.display = "none";
+        if (settingsBtn) settingsBtn.style.display = "none";
     }
 }
 
@@ -558,14 +600,15 @@ if (plusBtn && plusMenu) {
 
 const userIcon = document.getElementById("user-icon");
 if (userIcon) {
-    userIcon.addEventListener("click", () => {
-        // Activer les transitions seulement pendant l'animation d'ouverture
-        userIcon.style.transition = "width 0.35s ease, height 0.35s ease, border-radius 0.35s ease, background-color 0.35s ease";        userIcon.classList.toggle("active");
+    userIcon.addEventListener("click", (e) => {
+        e.stopPropagation();
+        userIcon.classList.toggle("active");
+    });
 
-        // Les retirer après l'animation pour éviter le lag au resize
-        setTimeout(() => {
-            userIcon.style.transition = "border-radius 0.35s ease, background-color 0.35s ease, transform 0.15s ease";
-        }, 400);
+    document.addEventListener("click", (e) => {
+        if (!userIcon.contains(e.target)) {
+            userIcon.classList.remove("active");
+        }
     });
 }
 // =============================================
@@ -726,6 +769,298 @@ function showToast(message, color = "#43b581") {
     toast.style.background = color;
     toast.classList.add("show");
     setTimeout(() => toast.classList.remove("show"), 3000);
+}
+
+// =============================================
+// PARAMÈTRES — page complète style Discord
+// =============================================
+
+const PSEUDO_COLORS = ["#5865f2", "#43b581", "#faa61a", "#e91e63", "#1abc9c", "#9c27b0"];
+
+function openSettings() {
+    if (!currentUserId) return;
+    showPage("page-settings");
+    loadSettingsAccount();
+    loadSettingsAppearance();
+    loadSettingsAV();
+    loadSettingsNotifications();
+}
+
+function closeSettings() {
+    navigate("/");
+}
+
+const settingsBtn = document.getElementById("settings-btn");
+if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
+
+// Onglets
+document.querySelectorAll(".s-tab").forEach(tab => {
+    tab.addEventListener("click", () => {
+        document.querySelectorAll(".s-tab").forEach(t => t.classList.remove("active"));
+        document.querySelectorAll(".s-panel").forEach(p => p.classList.remove("active"));
+        tab.classList.add("active");
+        const panel = document.querySelector(`.s-panel[data-panel="${tab.dataset.tab}"]`);
+        if (panel) panel.classList.add("active");
+    });
+});
+
+// --- Mon compte (avec avatar) ---
+async function loadSettingsAccount() {
+    const currentInput = document.getElementById("settings-current-password");
+    const newInput = document.getElementById("settings-new-password");
+
+    currentInput.value = "";
+    newInput.value = "";
+    setTimeout(() => { currentInput.value = ""; newInput.value = ""; }, 100);
+
+    document.getElementById("settings-password-error").style.display = "none";
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}`);
+        const data = await res.json();
+
+        const nameEl = document.getElementById("settings-username");
+        const avatarEl = document.getElementById("settings-avatar");
+        const createdEl = document.getElementById("settings-created");
+
+        if (nameEl) nameEl.textContent = data.username;
+        if (avatarEl) {
+            if (data.avatar_url) {
+                avatarEl.style.backgroundImage = `url(${data.avatar_url})`;
+                avatarEl.textContent = "";
+            } else {
+                avatarEl.style.backgroundImage = "";
+                avatarEl.textContent = (data.username || "?").charAt(0).toUpperCase();
+                avatarEl.style.background = stringToColor(data.username || "");
+            }
+        }
+        if (createdEl && data.created_at) {
+            const d = new Date(data.created_at);
+            createdEl.textContent = "Membre depuis " + d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
+        }
+
+        // Appliquer aussi à la bulle utilisateur
+        applyUserAvatar(data.avatar_url);
+
+    } catch (err) {
+        console.error("Erreur chargement profil paramètres:", err);
+    }
+}
+
+// Applique l'avatar partout où il doit apparaître (bulle utilisateur)
+function applyUserAvatar(avatarUrl) {
+    const bubbleAvatar = document.getElementById("user-avatar");
+    if (bubbleAvatar && avatarUrl) {
+        bubbleAvatar.src = avatarUrl;
+    }
+}
+
+// Clic sur l'avatar → ouvrir le sélecteur de fichier
+const avatarWrapper = document.getElementById("settings-avatar-wrapper");
+const avatarInput = document.getElementById("settings-avatar-input");
+if (avatarWrapper && avatarInput) {
+    avatarWrapper.addEventListener("click", () => avatarInput.click());
+
+    avatarInput.addEventListener("change", async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            showToast("Choisis une image valide", "#d9534f");
+            return;
+        }
+
+        try {
+            const resizedBase64 = await resizeImageToBase64(file, 200, 200);
+
+            const res = await fetch(`${API}/users/${currentUserId}/avatar`, {
+                method: "PUT",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ avatar_base64: resizedBase64 })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                showToast(data.error || "Erreur lors de l'envoi", "#d9534f");
+                return;
+            }
+
+            const avatarEl = document.getElementById("settings-avatar");
+            avatarEl.style.backgroundImage = `url(${resizedBase64})`;
+            avatarEl.textContent = "";
+
+            applyUserAvatar(resizedBase64);
+            showToast("Photo de profil mise à jour");
+
+        } catch (err) {
+            console.error("Erreur upload avatar:", err);
+            showToast("Erreur lors de l'envoi de l'image", "#d9534f");
+        }
+
+        avatarInput.value = "";
+    });
+}
+
+// Redimensionne une image en carré et la convertit en base64 (JPEG compressé)
+function resizeImageToBase64(file, maxWidth, maxHeight) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                const canvas = document.createElement("canvas");
+                canvas.width = maxWidth;
+                canvas.height = maxHeight;
+                const ctx = canvas.getContext("2d");
+
+                // Crop centré en carré
+                const side = Math.min(img.width, img.height);
+                const sx = (img.width - side) / 2;
+                const sy = (img.height - side) / 2;
+
+                ctx.drawImage(img, sx, sy, side, side, 0, 0, maxWidth, maxHeight);
+                resolve(canvas.toDataURL("image/jpeg", 0.8));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+const settingsPasswordSubmit = document.getElementById("settings-password-submit");
+if (settingsPasswordSubmit) settingsPasswordSubmit.addEventListener("click", async () => {
+    const currentInput = document.getElementById("settings-current-password");
+    const newInput = document.getElementById("settings-new-password");
+    const errorBox = document.getElementById("settings-password-error");
+    errorBox.style.display = "none";
+
+    const current_password = currentInput.value;
+    const new_password = newInput.value;
+
+    if (!current_password || !new_password) {
+        errorBox.textContent = "Remplis les deux champs.";
+        errorBox.style.display = "block";
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}/password`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ current_password, new_password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            errorBox.textContent = data.error || "Erreur lors de la mise à jour.";
+            errorBox.style.display = "block";
+            return;
+        }
+
+        currentInput.value = "";
+        newInput.value = "";
+        showToast("Mot de passe mis à jour");
+
+    } catch (err) {
+        errorBox.textContent = "Erreur de connexion au serveur.";
+        errorBox.style.display = "block";
+    }
+});
+
+const settingsLogout = document.getElementById("settings-logout");
+if (settingsLogout) settingsLogout.addEventListener("click", () => {
+    if (logoutBtn) logoutBtn.click();
+});
+
+// --- Apparence ---
+function loadSettingsAppearance() {
+    const row = document.getElementById("settings-color-row");
+    if (!row) return;
+    row.innerHTML = "";
+
+    const saved = localStorage.getItem("pseudoColor");
+
+    PSEUDO_COLORS.forEach(color => {
+        const dot = document.createElement("div");
+        dot.className = "color-dot" + (color === saved ? " selected" : "");
+        dot.style.background = color;
+        dot.onclick = () => {
+            localStorage.setItem("pseudoColor", color);
+            document.querySelectorAll(".color-dot").forEach(d => d.classList.remove("selected"));
+            dot.classList.add("selected");
+            showToast("Couleur de pseudo mise à jour");
+        };
+        row.appendChild(dot);
+    });
+}
+
+// --- Audio et vidéo ---
+async function loadSettingsAV() {
+    const camSelect = document.getElementById("settings-camera-select");
+    const micSelect = document.getElementById("settings-mic-select");
+    if (!camSelect || !micSelect) return;
+
+    camSelect.innerHTML = `<option>Chargement...</option>`;
+    micSelect.innerHTML = `<option>Chargement...</option>`;
+
+    try {
+        let devices = await navigator.mediaDevices.enumerateDevices();
+        let cams = devices.filter(d => d.kind === "videoinput");
+        let mics = devices.filter(d => d.kind === "audioinput");
+
+        // FIX : ne demander la permission que si les labels sont vides (première fois)
+        const needsPermission = cams.some(c => !c.label) || mics.some(m => !m.label);
+
+        if (needsPermission) {
+            const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
+            // Arrêter immédiatement tous les tracks
+            stream.getTracks().forEach(t => t.stop());
+            devices = await navigator.mediaDevices.enumerateDevices();
+            cams = devices.filter(d => d.kind === "videoinput");
+            mics = devices.filter(d => d.kind === "audioinput");
+        }
+
+        const savedCam = localStorage.getItem("preferredCameraId");
+        const savedMic = localStorage.getItem("preferredMicId");
+
+        camSelect.innerHTML = cams.length
+            ? cams.map(c => `<option value="${c.deviceId}" ${c.deviceId === savedCam ? "selected" : ""}>${c.label || "Caméra"}</option>`).join("")
+            : `<option>Aucune caméra détectée</option>`;
+
+        micSelect.innerHTML = mics.length
+            ? mics.map(m => `<option value="${m.deviceId}" ${m.deviceId === savedMic ? "selected" : ""}>${m.label || "Microphone"}</option>`).join("")
+            : `<option>Aucun micro détecté</option>`;
+
+        camSelect.onchange = () => {
+            localStorage.setItem("preferredCameraId", camSelect.value);
+            showToast("Caméra mise à jour");
+        };
+        micSelect.onchange = () => {
+            localStorage.setItem("preferredMicId", micSelect.value);
+            showToast("Microphone mis à jour");
+        };
+
+    } catch (err) {
+        camSelect.innerHTML = `<option>Accès refusé</option>`;
+        micSelect.innerHTML = `<option>Accès refusé</option>`;
+    }
+}
+
+// --- Notifications ---
+function loadSettingsNotifications() {
+    const toggle = document.getElementById("toggle-notifications");
+    if (!toggle) return;
+
+    const enabled = localStorage.getItem("notificationsEnabled") !== "false";
+    toggle.classList.toggle("on", enabled);
+
+    toggle.onclick = () => {
+        const newState = !toggle.classList.contains("on");
+        toggle.classList.toggle("on", newState);
+        localStorage.setItem("notificationsEnabled", newState);
+    };
 }
 
 // =============================================
