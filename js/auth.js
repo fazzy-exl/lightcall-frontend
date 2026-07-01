@@ -39,6 +39,7 @@ document.getElementById("register-btn").onclick = async () => {
 // -------------------------
 // Connexion
 // -------------------------
+// -------------------------
 document.getElementById("login-btn").onclick = async () => {
     const username = document.getElementById("login-username").value;
     const password = document.getElementById("login-password").value;

@@ -10,7 +10,6 @@ let currentServerId = null;
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
 
-// WebSocket pour la messagerie texte
 const textWs = new WebSocket("wss://lightcall-backend.onrender.com");
 textWs.onopen = () => console.log("Text WS connecté");
 textWs.onmessage = (event) => {
@@ -22,10 +21,6 @@ textWs.onmessage = (event) => {
         }
     }
 };
-
-// =============================================
-// ROUTER
-// =============================================
 
 function showPage(id) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
@@ -40,18 +35,14 @@ function navigate(path) {
 
 function router() {
     const path = window.location.pathname;
-
     if (currentUserId) loadServers();
 
-    if (path === "/" || path === "") {
-        showPage("page-menu");
-        return;
-    }
+    if (path === "/" || path === "") { showPage("page-menu"); return; }
 
-    const serverMatch = path.match(/^\/server\/(\d+)\/?$/);
+    const serverMatch = path.match(/^\/server\/([a-zA-Z0-9_-]+)(?:\/[^/]*)?\/?\s*$/);
     if (serverMatch) {
         showPage("page-server-view");
-        loadServer(serverMatch[1]);
+        loadServerByCode(serverMatch[1]);
         return;
     }
 
@@ -60,24 +51,15 @@ function router() {
 
 window.onpopstate = () => router();
 
-// =============================================
-// LISTE DES SERVEURS
-// =============================================
-
 async function loadServers() {
     const list = document.getElementById("server-list");
-    if (!list || !currentUserId) return;
-
-    if (!currentUserId) {
-        list.innerHTML = "";
-        return;
-    }
+    if (!list) return;
+    if (!currentUserId) { list.innerHTML = ""; return; }
 
     try {
         const res = await fetch(`${API}/servers/${String(currentUserId)}`);
         if (!res.ok) return;
         const servers = await res.json();
-
         list.innerHTML = "";
         servers.forEach(server => {
             const btn = document.createElement("button");
@@ -85,25 +67,17 @@ async function loadServers() {
             btn.textContent = server.name;
             btn.dataset.serverId = server.id;
             btn.dataset.serverName = server.name;
-            btn.onclick = () => navigate(`/server/${server.id}`);
+            btn.onclick = () => navigate(`/server/${server.invite_code}/${toSlug(server.name)}`);
             list.appendChild(btn);
         });
-    } catch (err) {
-        console.error("Erreur loadServers:", err);
-    }
+    } catch (err) { console.error("Erreur loadServers:", err); }
 }
-
-// =============================================
-// CHARGER UN SERVEUR
-// =============================================
 
 async function loadServer(serverId) {
     showPage("page-server-view");
     currentServerId = serverId;
     currentChannelId = null;
     lastMessageUserId = null;
-
-    // Fermer le call si on change de serveur
     leaveCall();
 
     const chatPanel = document.getElementById("chat-panel");
@@ -127,7 +101,6 @@ async function loadServer(serverId) {
         const sidebarName = document.getElementById("server-sidebar-name");
         if (sidebarName) sidebarName.textContent = data.name;
 
-        // Salons textuels
         if (textList) {
             textList.innerHTML = "";
             if (!data.text_channels?.length) {
@@ -140,18 +113,13 @@ async function loadServer(serverId) {
                     div.innerHTML = `<span class="ch-icon">#</span>${ch.name}`;
                     div.onclick = () => openTextChannel(ch.id, ch.name);
                     textList.appendChild(div);
-
-                    // FIX : double requestAnimationFrame pour forcer l'état invisible d'abord
-                    requestAnimationFrame(() => {
-                        requestAnimationFrame(() => {
-                            setTimeout(() => div.classList.add("visible"), index * 60);
-                        });
-                    });
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        setTimeout(() => div.classList.add("visible"), index * 60);
+                    }));
                 });
             }
         }
 
-        // Salons vocaux
         if (voiceList) {
             voiceList.innerHTML = "";
             if (!data.voice_channels?.length) {
@@ -168,7 +136,6 @@ async function loadServer(serverId) {
                 });
             }
         }
-
     } catch (err) {
         console.error("Erreur loadServer:", err);
         if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
@@ -176,44 +143,27 @@ async function loadServer(serverId) {
     }
 }
 
-// =============================================
-// SALON VOCAL — dans la page serveur
-// =============================================
-
 function openVoiceChannel(channelId, channelName) {
-    // FIX : ne pas rejoindre si déjà dans ce salon
     if (document.getElementById("call-panel").classList.contains("call-active") &&
-        document.getElementById("call-panel-name").textContent === channelName) {
-        return;
-    }
-    // Cacher le chat textuel, afficher le panneau d'appel
+        document.getElementById("call-panel-name").textContent === channelName) return;
+
     document.getElementById("chat-placeholder").style.display = "none";
     document.getElementById("chat-panel").classList.remove("active");
     document.getElementById("call-panel").classList.add("active");
     document.getElementById("call-panel-name").textContent = channelName;
 
-    // Vider les vidéos de l'appel précédent
     const videos = document.getElementById("videos");
     if (videos) videos.innerHTML = "";
 
-    // FIX : orange immédiatement au clic
-    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active"));
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
     const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
-    if (activeItem) activeItem.classList.add("active");
+    if (activeItem) activeItem.classList.add("active-voice");
 
     if (typeof initCallPage === "function") initCallPage(channelId);
-
-    setTimeout(() => {
-        if (typeof startCall === "function") startCall(channelId, videos);
-    }, 100);
+    setTimeout(() => { if (typeof startCall === "function") startCall(channelId, videos); }, 100);
 }
 
-// =============================================
-// CHAT TEXTUEL
-// =============================================
-
 function openTextChannel(channelId, channelName) {
-    // FIX : si call actif, cacher le panneau sans quitter
     const callPanel = document.getElementById("call-panel");
     if (callPanel && callPanel.classList.contains("call-active")) {
         callPanel.style.display = "none";
@@ -241,21 +191,14 @@ function openTextChannel(channelId, channelName) {
     loadMessages(channelId);
 }
 
-// Bouton retourner dans l'appel
 const miniCallReturn = document.getElementById("mini-call-return");
 if (miniCallReturn) miniCallReturn.addEventListener("click", () => {
-    // Fermer le chat
     document.getElementById("chat-panel").classList.remove("active");
     document.getElementById("chat-placeholder").style.display = "none";
-
-    // Réafficher le call
     const callPanel = document.getElementById("call-panel");
     if (callPanel) callPanel.style.display = "";
-
-    // Cacher le mini bar
     document.getElementById("mini-call-bar").classList.add("hidden");
 
-    // FIX : remettre le highlight sur le salon vocal actif
     const channelName = document.getElementById("call-panel-name").textContent;
     document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
     document.querySelectorAll(".ch-item").forEach(el => {
@@ -274,7 +217,8 @@ function leaveCall() {
     callPanel.style.display = "";
     document.getElementById("chat-placeholder").style.display = "";
     document.getElementById("mini-call-bar").classList.add("hidden");
-    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));}
+    document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
+}
 
 async function loadMessages(channelId) {
     const messagesDiv = document.getElementById("chat-messages");
@@ -284,7 +228,6 @@ async function loadMessages(channelId) {
     try {
         const res = await fetch(`${API}/messages/${channelId}`);
         const messages = await res.json();
-
         messagesDiv.innerHTML = "";
         if (!messages.length) {
             messagesDiv.innerHTML = `<div class="chat-empty">Aucun message pour le moment.<br>Sois le premier à écrire !</div>`;
@@ -292,7 +235,6 @@ async function loadMessages(channelId) {
         }
         messages.forEach(msg => appendMessage(msg));
         scrollToBottom();
-
     } catch (err) {
         console.error("Erreur chargement messages:", err);
         messagesDiv.innerHTML = `<div class="chat-empty">Impossible de charger les messages.</div>`;
@@ -346,23 +288,16 @@ async function sendMessage() {
         if (msg.error) return;
         appendMessage(msg);
         scrollToBottom();
-
         if (textWs.readyState === WebSocket.OPEN) {
             textWs.send(JSON.stringify({ type: "text_message", channel_id: currentChannelId, ...msg }));
         }
-    } catch (err) {
-        console.error("Erreur envoi message:", err);
-    }
+    } catch (err) { console.error("Erreur envoi message:", err); }
 }
 
 function scrollToBottom() {
     const div = document.getElementById("chat-messages");
     if (div) div.scrollTop = div.scrollHeight;
 }
-
-// =============================================
-// UTILITAIRES
-// =============================================
 
 function escapeHtml(text) {
     const d = document.createElement("div");
@@ -377,9 +312,13 @@ function stringToColor(str) {
     return colors[Math.abs(hash) % colors.length];
 }
 
-// =============================================
-// AUTH UI
-// =============================================
+function showToast(message, color = "#43b581") {
+    const toast = document.getElementById("toast");
+    toast.textContent = message;
+    toast.style.background = color;
+    toast.classList.add("show");
+    setTimeout(() => toast.classList.remove("show"), 3000);
+}
 
 function updateAuthUI() {
     const loginBtn = document.querySelector(".login-btn");
@@ -404,26 +343,21 @@ async function loadUserProfile() {
     if (!currentUserId) return;
     try {
         const res = await fetch(`${API}/users/${currentUserId}`);
-
-        // Si l'utilisateur n'existe pas → déconnecter
         if (!res.ok) {
             currentUserId = null;
             localStorage.removeItem("userId");
             updateAuthUI();
             return;
         }
-
         const data = await res.json();
         const userInfo = document.getElementById("user-info");
         if (userInfo && data.username) userInfo.textContent = data.username;
-    } catch (err) {
-        console.log("Impossible de charger le profil");
-    }
-}
 
-// =============================================
-// MENU CLIC DROIT SERVEUR
-// =============================================
+        applyUserAvatar(data.avatar_url);
+        currentAvatarDataUrl = data.avatar_url || null;
+        currentAvatarOriginalUrl = data.avatar_original || data.avatar_url || null;
+    } catch (err) { console.log("Impossible de charger le profil"); }
+}
 
 const contextMenu = document.getElementById("server-context-menu");
 let selectedServerId = null;
@@ -491,10 +425,6 @@ if (confirmRename) confirmRename.onclick = () => {
 const renameInput = document.getElementById("rename-server-input");
 if (renameInput) renameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmRename.click(); });
 
-// =============================================
-// CRÉER / REJOINDRE SERVEUR
-// =============================================
-
 const openCreate = document.getElementById("open-create-server");
 const cancelCreate = document.getElementById("cancel-create-server");
 const confirmCreate = document.getElementById("confirm-create-server");
@@ -514,18 +444,11 @@ if (confirmCreate) confirmCreate.onclick = () => {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ name, owner_id: currentUserId })
-    })
-        .then(res => res.json())
-        .then(data => {
-            document.getElementById("create-server-popup").classList.add("hidden");
-            serverNameInput.value = "";
-
-            // FIX : recharger immédiatement sans alert qui bloque
-            loadServers().then(() => {
-                // Naviguer vers le nouveau serveur directement
-                navigate(`/server/${data.server_id}`);
-            });
-        });
+    }).then(res => res.json()).then(data => {
+        document.getElementById("create-server-popup").classList.add("hidden");
+        serverNameInput.value = "";
+        loadServers().then(() => navigate(`/server/${data.server_id}`));
+    });
 };
 if (serverNameInput) serverNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmCreate.click(); });
 
@@ -556,10 +479,6 @@ if (confirmJoin) confirmJoin.onclick = () => {
     });
 };
 
-// =============================================
-// SIDEBAR REDIMENSIONNABLE
-// =============================================
-
 const sidebar = document.getElementById("sidebar");
 const resizer = document.getElementById("sidebar-resizer");
 if (sidebar && resizer) {
@@ -583,9 +502,14 @@ if (sidebar && resizer) {
     });
 }
 
-// =============================================
-// MENU +
-// =============================================
+function updateMinWidth() {
+    const bubbleSpace = 320 + 20 + 20;
+    document.body.style.minWidth = (sidebar.offsetWidth + bubbleSpace) + "px";
+}
+if (sidebar) {
+    updateMinWidth();
+    new ResizeObserver(updateMinWidth).observe(sidebar);
+}
 
 const plusBtn = document.getElementById("server-plus-btn");
 const plusMenu = document.getElementById("server-plus-menu");
@@ -594,26 +518,16 @@ if (plusBtn && plusMenu) {
     document.addEventListener("click", (e) => { if (!plusBtn.contains(e.target) && !plusMenu.contains(e.target)) plusMenu.classList.add("hidden"); });
 }
 
-// =============================================
-// ICÔNE UTILISATEUR
-// =============================================
-
 const userIcon = document.getElementById("user-icon");
 if (userIcon) {
     userIcon.addEventListener("click", (e) => {
         e.stopPropagation();
         userIcon.classList.toggle("active");
     });
-
     document.addEventListener("click", (e) => {
-        if (!userIcon.contains(e.target)) {
-            userIcon.classList.remove("active");
-        }
+        if (!userIcon.contains(e.target)) userIcon.classList.remove("active");
     });
 }
-// =============================================
-// MODALS
-// =============================================
 
 const loginBtn = document.querySelector(".login-btn");
 const signupBtn = document.querySelector(".signup-btn");
@@ -637,10 +551,6 @@ document.querySelectorAll(".password-wrapper").forEach(wrapper => {
     }
 });
 
-// =============================================
-// SIGN UP
-// =============================================
-
 const signupSubmit = document.getElementById("signup-submit");
 if (signupSubmit) {
     signupSubmit.addEventListener("click", async () => {
@@ -663,7 +573,6 @@ if (signupSubmit) {
             return;
         }
 
-        // Succès
         currentUserId = String(data.user_id);
         localStorage.setItem("userId", currentUserId);
         updateAuthUI();
@@ -678,10 +587,6 @@ if (signupSubmit) {
         if (el) el.addEventListener("input", () => { document.getElementById("signup-error").style.display = "none"; });
     });
 }
-
-// =============================================
-// LOGIN
-// =============================================
 
 const loginSubmit = document.getElementById("login-submit");
 if (loginSubmit) {
@@ -717,7 +622,6 @@ if (loginSubmit) {
             loadServers();
             document.getElementById("login-modal").style.display = "none";
             showToast("Connecté avec succès !");
-
         } catch (err) { console.error("Erreur login:", err); }
     });
 
@@ -733,47 +637,19 @@ if (logoutBtn) logoutBtn.addEventListener("click", () => {
     localStorage.removeItem("userId");
     const userInfo = document.getElementById("user-info");
     if (userInfo) userInfo.textContent = "";
-    // FIX : vider la liste directement
     const serverList = document.getElementById("server-list");
     if (serverList) serverList.innerHTML = "";
     updateAuthUI();
     navigate("/");
 });
 
-// Bouton quitter le call
 const callLeaveBtn = document.getElementById("call-leave-btn");
 if (callLeaveBtn) callLeaveBtn.addEventListener("click", leaveCall);
 
-// Chat — Entrée pour envoyer
 const chatInput = document.getElementById("chat-input");
 const chatSendBtn = document.getElementById("chat-send-btn");
 if (chatInput) chatInput.addEventListener("keydown", e => { if (e.key === "Enter" && !e.shiftKey) { e.preventDefault(); sendMessage(); } });
 if (chatSendBtn) chatSendBtn.addEventListener("click", sendMessage);
-
-// =============================================
-// SIDEBAR
-// =============================================
-
-function updateMinWidth() {
-    const sidebar = document.getElementById("sidebar");
-    const bubbleSpace = 320 + 20 + 20; // largeur bulle + marges
-    document.body.style.minWidth = (sidebar.offsetWidth + bubbleSpace) + "px";
-}
-
-updateMinWidth();
-new ResizeObserver(updateMinWidth).observe(document.getElementById("sidebar"));
-
-function showToast(message, color = "#43b581") {
-    const toast = document.getElementById("toast");
-    toast.textContent = message;
-    toast.style.background = color;
-    toast.classList.add("show");
-    setTimeout(() => toast.classList.remove("show"), 3000);
-}
-
-// =============================================
-// PARAMÈTRES — page complète style Discord
-// =============================================
 
 const PSEUDO_COLORS = ["#5865f2", "#43b581", "#faa61a", "#e91e63", "#1abc9c", "#9c27b0"];
 
@@ -786,14 +662,11 @@ function openSettings() {
     loadSettingsNotifications();
 }
 
-function closeSettings() {
-    navigate("/");
-}
+function closeSettings() { navigate("/"); }
 
 const settingsBtn = document.getElementById("settings-btn");
 if (settingsBtn) settingsBtn.addEventListener("click", openSettings);
 
-// Onglets
 document.querySelectorAll(".s-tab").forEach(tab => {
     tab.addEventListener("click", () => {
         document.querySelectorAll(".s-tab").forEach(t => t.classList.remove("active"));
@@ -804,7 +677,6 @@ document.querySelectorAll(".s-tab").forEach(tab => {
     });
 });
 
-// --- Mon compte (avec avatar) ---
 async function loadSettingsAccount() {
     const currentInput = document.getElementById("settings-current-password");
     const newInput = document.getElementById("settings-new-password");
@@ -839,94 +711,15 @@ async function loadSettingsAccount() {
             createdEl.textContent = "Membre depuis " + d.toLocaleDateString("fr-FR", { month: "long", year: "numeric" });
         }
 
-        // Appliquer aussi à la bulle utilisateur
         applyUserAvatar(data.avatar_url);
-
-    } catch (err) {
-        console.error("Erreur chargement profil paramètres:", err);
-    }
+        currentAvatarDataUrl = data.avatar_url || null;
+        currentAvatarOriginalUrl = data.avatar_original || data.avatar_url || null;
+    } catch (err) { console.error("Erreur chargement profil paramètres:", err); }
 }
 
-// Applique l'avatar partout où il doit apparaître (bulle utilisateur)
 function applyUserAvatar(avatarUrl) {
     const bubbleAvatar = document.getElementById("user-avatar");
-    if (bubbleAvatar && avatarUrl) {
-        bubbleAvatar.src = avatarUrl;
-    }
-}
-
-// Clic sur l'avatar → ouvrir le sélecteur de fichier
-const avatarWrapper = document.getElementById("settings-avatar-wrapper");
-const avatarInput = document.getElementById("settings-avatar-input");
-if (avatarWrapper && avatarInput) {
-    avatarWrapper.addEventListener("click", () => avatarInput.click());
-
-    avatarInput.addEventListener("change", async (e) => {
-        const file = e.target.files[0];
-        if (!file) return;
-
-        if (!file.type.startsWith("image/")) {
-            showToast("Choisis une image valide", "#d9534f");
-            return;
-        }
-
-        try {
-            const resizedBase64 = await resizeImageToBase64(file, 200, 200);
-
-            const res = await fetch(`${API}/users/${currentUserId}/avatar`, {
-                method: "PUT",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ avatar_base64: resizedBase64 })
-            });
-            const data = await res.json();
-
-            if (!res.ok || !data.success) {
-                showToast(data.error || "Erreur lors de l'envoi", "#d9534f");
-                return;
-            }
-
-            const avatarEl = document.getElementById("settings-avatar");
-            avatarEl.style.backgroundImage = `url(${resizedBase64})`;
-            avatarEl.textContent = "";
-
-            applyUserAvatar(resizedBase64);
-            showToast("Photo de profil mise à jour");
-
-        } catch (err) {
-            console.error("Erreur upload avatar:", err);
-            showToast("Erreur lors de l'envoi de l'image", "#d9534f");
-        }
-
-        avatarInput.value = "";
-    });
-}
-
-// Redimensionne une image en carré et la convertit en base64 (JPEG compressé)
-function resizeImageToBase64(file, maxWidth, maxHeight) {
-    return new Promise((resolve, reject) => {
-        const reader = new FileReader();
-        reader.onload = (e) => {
-            const img = new Image();
-            img.onload = () => {
-                const canvas = document.createElement("canvas");
-                canvas.width = maxWidth;
-                canvas.height = maxHeight;
-                const ctx = canvas.getContext("2d");
-
-                // Crop centré en carré
-                const side = Math.min(img.width, img.height);
-                const sx = (img.width - side) / 2;
-                const sy = (img.height - side) / 2;
-
-                ctx.drawImage(img, sx, sy, side, side, 0, 0, maxWidth, maxHeight);
-                resolve(canvas.toDataURL("image/jpeg", 0.8));
-            };
-            img.onerror = reject;
-            img.src = e.target.result;
-        };
-        reader.onerror = reject;
-        reader.readAsDataURL(file);
-    });
+    if (bubbleAvatar && avatarUrl) bubbleAvatar.src = avatarUrl;
 }
 
 const settingsPasswordSubmit = document.getElementById("settings-password-submit");
@@ -962,7 +755,6 @@ if (settingsPasswordSubmit) settingsPasswordSubmit.addEventListener("click", asy
         currentInput.value = "";
         newInput.value = "";
         showToast("Mot de passe mis à jour");
-
     } catch (err) {
         errorBox.textContent = "Erreur de connexion au serveur.";
         errorBox.style.display = "block";
@@ -970,11 +762,8 @@ if (settingsPasswordSubmit) settingsPasswordSubmit.addEventListener("click", asy
 });
 
 const settingsLogout = document.getElementById("settings-logout");
-if (settingsLogout) settingsLogout.addEventListener("click", () => {
-    if (logoutBtn) logoutBtn.click();
-});
+if (settingsLogout) settingsLogout.addEventListener("click", () => { if (logoutBtn) logoutBtn.click(); });
 
-// --- Apparence ---
 function loadSettingsAppearance() {
     const row = document.getElementById("settings-color-row");
     if (!row) return;
@@ -996,7 +785,6 @@ function loadSettingsAppearance() {
     });
 }
 
-// --- Audio et vidéo ---
 async function loadSettingsAV() {
     const camSelect = document.getElementById("settings-camera-select");
     const micSelect = document.getElementById("settings-mic-select");
@@ -1010,12 +798,10 @@ async function loadSettingsAV() {
         let cams = devices.filter(d => d.kind === "videoinput");
         let mics = devices.filter(d => d.kind === "audioinput");
 
-        // FIX : ne demander la permission que si les labels sont vides (première fois)
         const needsPermission = cams.some(c => !c.label) || mics.some(m => !m.label);
 
         if (needsPermission) {
             const stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: true });
-            // Arrêter immédiatement tous les tracks
             stream.getTracks().forEach(t => t.stop());
             devices = await navigator.mediaDevices.enumerateDevices();
             cams = devices.filter(d => d.kind === "videoinput");
@@ -1033,22 +819,14 @@ async function loadSettingsAV() {
             ? mics.map(m => `<option value="${m.deviceId}" ${m.deviceId === savedMic ? "selected" : ""}>${m.label || "Microphone"}</option>`).join("")
             : `<option>Aucun micro détecté</option>`;
 
-        camSelect.onchange = () => {
-            localStorage.setItem("preferredCameraId", camSelect.value);
-            showToast("Caméra mise à jour");
-        };
-        micSelect.onchange = () => {
-            localStorage.setItem("preferredMicId", micSelect.value);
-            showToast("Microphone mis à jour");
-        };
-
+        camSelect.onchange = () => { localStorage.setItem("preferredCameraId", camSelect.value); showToast("Caméra mise à jour"); };
+        micSelect.onchange = () => { localStorage.setItem("preferredMicId", micSelect.value); showToast("Microphone mis à jour"); };
     } catch (err) {
         camSelect.innerHTML = `<option>Accès refusé</option>`;
         micSelect.innerHTML = `<option>Accès refusé</option>`;
     }
 }
 
-// --- Notifications ---
 function loadSettingsNotifications() {
     const toggle = document.getElementById("toggle-notifications");
     if (!toggle) return;
@@ -1064,8 +842,340 @@ function loadSettingsNotifications() {
 }
 
 // =============================================
-// INITIALISATION
+// AVATAR — variables (remplace les anciennes déclarations)
 // =============================================
+
+const avatarWrapper = document.getElementById("settings-avatar-wrapper");
+const avatarInput = document.getElementById("settings-avatar-input");
+
+let currentAvatarDataUrl = null;     // version recadrée (affichage)
+let currentAvatarOriginalUrl = null; // photo source complète (pour re-recadrer)
+
+let cropImgNatural = { w: 0, h: 0 };
+let cropOffset = { x: 0, y: 0 };
+let cropScale = 1;
+let cropBaseScale = 1;
+let isDraggingCrop = false;
+let dragStart = { x: 0, y: 0 };
+
+const cropStage = document.getElementById("crop-stage");
+const cropImage = document.getElementById("crop-image");
+const cropZoom = document.getElementById("crop-zoom");
+
+function openCropModal(dataUrl) {
+    cropImage.src = dataUrl;
+    document.getElementById("avatar-crop-modal").style.display = "flex";
+
+    cropImage.onload = () => {
+        cropImgNatural.w = cropImage.naturalWidth;
+        cropImgNatural.h = cropImage.naturalHeight;
+        cropBaseScale = 280 / Math.min(cropImgNatural.w, cropImgNatural.h);
+        cropScale = cropBaseScale;
+        cropOffset = { x: 0, y: 0 };
+        cropZoom.value = 100;
+        applyCropTransform();
+    };
+}
+
+function applyCropTransform() {
+    cropImage.style.width = (cropImgNatural.w * cropScale) + "px";
+    cropImage.style.height = (cropImgNatural.h * cropScale) + "px";
+    cropImage.style.transform = `translate(calc(-50% + ${cropOffset.x}px), calc(-50% + ${cropOffset.y}px))`;
+}
+
+function clampCropOffset() {
+    const dispW = cropImgNatural.w * cropScale;
+    const dispH = cropImgNatural.h * cropScale;
+    const maxX = Math.max(0, (dispW - 280) / 2);
+    const maxY = Math.max(0, (dispH - 280) / 2);
+    cropOffset.x = Math.min(maxX, Math.max(-maxX, cropOffset.x));
+    cropOffset.y = Math.min(maxY, Math.max(-maxY, cropOffset.y));
+}
+
+if (cropZoom) {
+    cropZoom.addEventListener("input", () => {
+        const percent = parseInt(cropZoom.value, 10) / 100;
+        cropScale = cropBaseScale * percent;
+        clampCropOffset();
+        applyCropTransform();
+    });
+}
+
+if (cropStage) {
+    cropStage.addEventListener("mousedown", (e) => {
+        isDraggingCrop = true;
+        cropStage.classList.add("dragging");
+        dragStart = { x: e.clientX - cropOffset.x, y: e.clientY - cropOffset.y };
+    });
+    document.addEventListener("mousemove", (e) => {
+        if (!isDraggingCrop) return;
+        cropOffset.x = e.clientX - dragStart.x;
+        cropOffset.y = e.clientY - dragStart.y;
+        clampCropOffset();
+        applyCropTransform();
+    });
+    document.addEventListener("mouseup", () => {
+        isDraggingCrop = false;
+        cropStage.classList.remove("dragging");
+    });
+    cropStage.addEventListener("touchstart", (e) => {
+        const t = e.touches[0];
+        isDraggingCrop = true;
+        dragStart = { x: t.clientX - cropOffset.x, y: t.clientY - cropOffset.y };
+    });
+    document.addEventListener("touchmove", (e) => {
+        if (!isDraggingCrop) return;
+        const t = e.touches[0];
+        cropOffset.x = t.clientX - dragStart.x;
+        cropOffset.y = t.clientY - dragStart.y;
+        clampCropOffset();
+        applyCropTransform();
+    });
+    document.addEventListener("touchend", () => { isDraggingCrop = false; });
+}
+
+const avatarCropCancel = document.getElementById("avatar-crop-cancel");
+if (avatarCropCancel) avatarCropCancel.addEventListener("click", () => {
+    document.getElementById("avatar-crop-modal").style.display = "none";
+});
+
+// FIX : variable pour savoir si on uploade une NOUVELLE photo ou si on re-recadre l'originale existante
+let cropIsNewUpload = false;
+
+const avatarCropSave = document.getElementById("avatar-crop-save");
+if (avatarCropSave) avatarCropSave.addEventListener("click", async () => {
+    const OUTPUT = 200;
+    const canvas = document.createElement("canvas");
+    canvas.width = OUTPUT;
+    canvas.height = OUTPUT;
+    const ctx = canvas.getContext("2d");
+
+    const visibleSize = 280;
+    const srcCenterX = cropImgNatural.w / 2 - cropOffset.x / cropScale;
+    const srcCenterY = cropImgNatural.h / 2 - cropOffset.y / cropScale;
+    const srcSize = visibleSize / cropScale;
+
+    ctx.save();
+    ctx.beginPath();
+    ctx.arc(OUTPUT / 2, OUTPUT / 2, OUTPUT / 2, 0, Math.PI * 2);
+    ctx.clip();
+
+    ctx.drawImage(
+        cropImage,
+        srcCenterX - srcSize / 2, srcCenterY - srcSize / 2, srcSize, srcSize,
+        0, 0, OUTPUT, OUTPUT
+    );
+    ctx.restore();
+
+    const base64 = canvas.toDataURL("image/jpeg", 0.85);
+
+    const body = { avatar_base64: base64 };
+    // FIX : envoyer l'original SEULEMENT si c'est un nouvel upload
+    if (cropIsNewUpload) {
+        body.avatar_original_base64 = currentAvatarOriginalUrl;
+    }
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}/avatar`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body)
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            showToast(data.error || "Erreur lors de l'envoi", "#d9534f");
+            return;
+        }
+
+        const avatarEl = document.getElementById("settings-avatar");
+        avatarEl.style.backgroundImage = `url(${base64})`;
+        avatarEl.textContent = "";
+
+        applyUserAvatar(base64);
+        currentAvatarDataUrl = base64;
+        document.getElementById("avatar-crop-modal").style.display = "none";
+        showToast("Photo de profil mise à jour");
+
+    } catch (err) {
+        console.error("Erreur upload avatar:", err);
+        showToast("Erreur lors de l'envoi de l'image", "#d9534f");
+    }
+});
+
+// =============================================
+// MENU CONTEXTUEL AVATAR — Changer / Redimensionner
+// =============================================
+
+const avatarMenu = document.getElementById("avatar-menu");
+const avatarMenuChange = document.getElementById("avatar-menu-change");
+const avatarMenuResize = document.getElementById("avatar-menu-resize");
+
+if (avatarWrapper) {
+    avatarWrapper.onclick = (e) => {
+        e.stopPropagation();
+        const rect = avatarWrapper.getBoundingClientRect();
+        avatarMenu.style.top = (rect.bottom + window.scrollY + 6) + "px";
+        avatarMenu.style.left = rect.left + "px";
+        avatarMenu.classList.toggle("hidden");
+    };
+    document.addEventListener("click", () => avatarMenu.classList.add("hidden"));
+}
+
+if (avatarMenuChange) {
+    avatarMenuChange.onclick = () => {
+        avatarMenu.classList.add("hidden");
+        avatarInput.click();
+    };
+}
+
+if (avatarMenuResize) {
+    avatarMenuResize.onclick = () => {
+        avatarMenu.classList.add("hidden");
+        // FIX : utilise toujours l'image ORIGINALE complète, pas la version déjà recadrée
+        if (!currentAvatarOriginalUrl) {
+            showToast("Aucune photo à redimensionner pour le moment", "#faa61a");
+            return;
+        }
+        cropIsNewUpload = false; // on ne renvoie pas l'original, il est déjà en base
+        openCropModal(currentAvatarOriginalUrl);
+    };
+}
+
+// Redimensionne l'image source (sans la rendre carrée) à une taille raisonnable avant stockage
+function resizeOriginalToBase64(file, maxDim) {
+    return new Promise((resolve, reject) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            const img = new Image();
+            img.onload = () => {
+                let { width, height } = img;
+                if (width > height && width > maxDim) {
+                    height = Math.round(height * (maxDim / width));
+                    width = maxDim;
+                } else if (height > maxDim) {
+                    width = Math.round(width * (maxDim / height));
+                    height = maxDim;
+                }
+                const canvas = document.createElement("canvas");
+                canvas.width = width;
+                canvas.height = height;
+                canvas.getContext("2d").drawImage(img, 0, 0, width, height);
+                resolve(canvas.toDataURL("image/jpeg", 0.85));
+            };
+            img.onerror = reject;
+            img.src = e.target.result;
+        };
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+    });
+}
+
+if (avatarInput) {
+    avatarInput.onchange = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        if (!file.type.startsWith("image/")) {
+            showToast("Choisis une image valide", "#d9534f");
+            return;
+        }
+
+        try {
+            // FIX : garder l'image source complète (non carrée), juste limitée en taille
+            const originalBase64 = await resizeOriginalToBase64(file, 800);
+            currentAvatarOriginalUrl = originalBase64;
+            cropIsNewUpload = true;
+            openCropModal(originalBase64);
+        } catch (err) {
+            console.error("Erreur traitement image:", err);
+            showToast("Erreur lors du traitement de l'image", "#d9534f");
+        }
+
+        avatarInput.value = "";
+    };
+}
+
+// Fonction pour créer un slug à partir d'un nom
+function toSlug(name) {
+    return name
+        .toLowerCase()
+        .normalize("NFD").replace(/[\u0300-\u036f]/g, "") // retire les accents
+        .replace(/[^a-z0-9]+/g, "-") // remplace les caractères spéciaux par -
+        .replace(/^-|-$/g, ""); // retire les tirets au début/fin
+}
+
+async function loadServerByCode(inviteCode) {
+    showPage("page-server-view");
+    currentChannelId = null;
+    lastMessageUserId = null;
+    leaveCall();
+
+    const chatPanel = document.getElementById("chat-panel");
+    const chatPlaceholder = document.getElementById("chat-placeholder");
+    if (chatPanel) chatPanel.classList.remove("active");
+    if (chatPlaceholder) chatPlaceholder.style.display = "";
+
+    const textList = document.getElementById("text-channels");
+    const voiceList = document.getElementById("voice-channel-list");
+
+    try {
+        const res = await fetch(`${API}/servers/by-code/${inviteCode}/full`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        if (!data || data.error) {
+            if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#f04747;">Erreur de chargement</div>`;
+            return;
+        }
+
+        currentServerId = data.id;
+
+        const sidebarName = document.getElementById("server-sidebar-name");
+        if (sidebarName) sidebarName.textContent = data.name;
+
+        if (textList) {
+            textList.innerHTML = "";
+            if (!data.text_channels?.length) {
+                textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Aucun salon</div>`;
+            } else {
+                data.text_channels.forEach((ch, index) => {
+                    const div = document.createElement("div");
+                    div.className = "ch-item";
+                    div.dataset.channelId = ch.id;
+                    div.innerHTML = `<span class="ch-icon">#</span>${ch.name}`;
+                    div.onclick = () => openTextChannel(ch.id, ch.name);
+                    textList.appendChild(div);
+                    requestAnimationFrame(() => requestAnimationFrame(() => {
+                        setTimeout(() => div.classList.add("visible"), index * 60);
+                    }));
+                });
+            }
+        }
+
+        if (voiceList) {
+            voiceList.innerHTML = "";
+            if (!data.voice_channels?.length) {
+                voiceList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#888;">Aucun salon</div>`;
+            } else {
+                data.voice_channels.forEach((ch, index) => {
+                    const div = document.createElement("div");
+                    div.className = "ch-item";
+                    div.dataset.channelId = ch.id;
+                    div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
+                    div.onclick = () => openVoiceChannel(ch.id, ch.name);
+                    voiceList.appendChild(div);
+                    setTimeout(() => div.classList.add("visible"), index * 50);
+                });
+            }
+        }
+
+    } catch (err) {
+        console.error("Erreur loadServerByCode:", err);
+        if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
+        setTimeout(() => loadServerByCode(inviteCode), 2000);
+    }
+}
 
 router();
 updateAuthUI();

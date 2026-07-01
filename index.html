@@ -72,9 +72,6 @@
                 <span id="mini-call-name"></span>
                 <button id="mini-call-return">↩ Retourner</button>
             </div>
-            <div id="server-sidebar-footer">
-                <button class="back-btn" onclick="navigate('/')">← Retour</button>
-            </div>
         </div>
 
         <!-- Zone chat / call -->
@@ -279,8 +276,34 @@
     </div>
 </div>
 
+<!-- MENU CONTEXTUEL AVATAR -->
+<div id="avatar-menu" class="hidden" style="position:absolute;background:#1e1e1e;border:1px solid #333;border-radius:8px;padding:6px 0;width:170px;z-index:9999;box-shadow:0 4px 16px rgba(0,0,0,0.5);">
+    <div id="avatar-menu-change" style="padding:10px 14px;cursor:pointer;font-size:0.9rem;color:white;">Changer la photo</div>
+    <div id="avatar-menu-resize" style="padding:10px 14px;cursor:pointer;font-size:0.9rem;color:white;">Redimensionner</div>
+</div>
+
+<!-- MODAL RECADRAGE AVATAR -->
+<div id="avatar-crop-modal" class="modal">
+    <div class="modal-content" style="width:340px;">
+        <span class="close-modal" id="avatar-crop-cancel">&times;</span>
+        <h2>Recadrer ta photo</h2>
+
+        <div id="crop-stage">
+            <img id="crop-image" draggable="false" alt="">
+            <div id="crop-circle"></div>
+        </div>
+
+        <input type="range" id="crop-zoom" min="100" max="300" value="100" style="width:100%;margin-top:14px;">
+
+        <div class="popup-buttons" style="margin-top:14px;">
+            <button id="avatar-crop-save" class="modal-btn">Enregistrer</button>
+        </div>
+    </div>
+</div>
+
 <script src="/js/script.js"></script>
 <script src="/js/call.js"></script>
 <div id="toast"></div>
+
 </body>
 </html>

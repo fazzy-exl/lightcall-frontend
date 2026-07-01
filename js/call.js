@@ -372,10 +372,46 @@ async function resetCamera(withVideo = true) {
     try {
         const stream = await navigator.mediaDevices.getUserMedia({
             video: withVideo ? { width: { ideal: 1280 }, height: { ideal: 720 }, frameRate: { ideal: 30, min: 24 } } : false,
-            audio: { echoCancellation: true, noiseSuppression: true, autoGainControl: true }
+            audio: {
+                echoCancellation: true,
+                noiseSuppression: true,
+                autoGainControl: true,
+                // FIX : filtre avancé pour isoler la voix
+                sampleRate: 48000,
+                channelCount: 1 // mono → plus facile à filtrer
+            }
         });
-        localStream = stream;
+
+        // Filtre de fréquence pour isoler la voix humaine
+        const audioContext = new AudioContext();
+        const source = audioContext.createMediaStreamSource(stream);
+
+        // Filtre passe-haut : coupe les basses fréquences (bruits de ventilateur, etc.)
+        const highPass = audioContext.createBiquadFilter();
+        highPass.type = "highpass";
+        highPass.frequency.value = 80;
+
+        // Filtre passe-bas : coupe les hautes fréquences (sifflements, etc.)
+        const lowPass = audioContext.createBiquadFilter();
+        lowPass.type = "lowpass";
+        lowPass.frequency.value = 8000;
+
+        source.connect(highPass);
+        highPass.connect(lowPass);
+
+        // Reconnecter à un nouveau stream audio filtré
+        const destination = audioContext.createMediaStreamDestination();
+        lowPass.connect(destination);
+
+        // Combiner le stream audio filtré avec la vidéo originale
+        const filteredStream = new MediaStream([
+            ...stream.getVideoTracks(),
+            ...destination.stream.getAudioTracks()
+        ]);
+
+        localStream = filteredStream;
         return true;
+
     } catch (e) {
         console.error("Impossible d'accéder à la caméra :", e);
         return false;

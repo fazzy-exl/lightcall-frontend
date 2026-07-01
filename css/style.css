@@ -320,11 +320,6 @@ h1 {
     to   { opacity: 1; transform: translateX(0); }
 }
 
-#server-sidebar-footer {
-    margin-top: auto;
-    padding: 12px;
-    border-top: 1px solid #2a2a2a;
-}
 .back-btn {
     width: 100%;
     padding: 8px 12px;
@@ -1221,4 +1216,45 @@ h1 {
 
 #settings-avatar-wrapper:hover #settings-avatar-overlay {
     opacity: 1;
+}
+
+/* Recadrage avatar */
+#crop-stage {
+    position: relative;
+    width: 280px;
+    height: 280px;
+    margin: 0 auto;
+    overflow: hidden;
+    background: #111;
+    border-radius: 8px;
+    cursor: grab;
+    touch-action: none;
+}
+
+#crop-stage.dragging {
+    cursor: grabbing;
+}
+
+#crop-image {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%) scale(1);
+    max-width: none;
+    user-select: none;
+    pointer-events: none;
+}
+
+#crop-circle {
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    box-shadow: 0 0 0 9999px rgba(0,0,0,0.55);
+    border-radius: 50%;
+    border: 2px solid white;
+    margin: 0;
+}
+
+#avatar-menu div:hover {
+    background: #2a2a2a;
 }
