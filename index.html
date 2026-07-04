@@ -15,6 +15,7 @@
         <div class="menu-column">
             <h2>Serveurs</h2>
             <div id="server-list" class="menu-list"></div>
+            <!-- mini-call-bar RETIRÉ d'ici -->
             <button id="server-plus-btn">+</button>
             <div id="server-plus-menu" class="hidden">
                 <div class="menu-item" id="open-create-server">Créer un serveur</div>
@@ -28,9 +29,25 @@
             </div>
         </div>
     </div>
-    <div id="sidebar-footer">
-        
+
+    <!-- Seulement celui-ci reste -->
+    <div id="mini-call-bar" class="hidden">
+        <div style="display:flex;align-items:center;gap:6px;overflow:hidden;">
+            <span>🔊</span>
+            <span id="mini-call-name"></span>
+        </div>
+        <button id="mini-call-return">↩ Retourner</button>
     </div>
+
+    <div id="quick-access">
+        <div id="quick-access-header">
+            <span>Accès rapide</span>
+            <button id="quick-access-add">+</button>
+        </div>
+        <div id="quick-access-list"></div>
+    </div>
+
+    <div id="sidebar-footer"></div>
     <div id="sidebar-resizer"></div>
 </div>
 
@@ -66,12 +83,7 @@
             <div id="text-channels"></div>
             <div class="ch-section">Salons vocaux</div>
             <div id="voice-channel-list"></div>
-            <!-- FIX : mini indicateur d'appel actif -->
-            <div id="mini-call-bar" class="hidden">
-                <span>🔊</span>
-                <span id="mini-call-name"></span>
-                <button id="mini-call-return">↩ Retourner</button>
-            </div>
+
         </div>
 
         <!-- Zone chat / call -->

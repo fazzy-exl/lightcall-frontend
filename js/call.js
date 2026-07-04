@@ -6,6 +6,8 @@ console.log("Call.js chargé");
 const ws = new WebSocket("wss://lightcall-backend.onrender.com");
 
 let localStream = null;
+let audioCtx = null; // ← ajoute en haut avec les autres variables
+let originalStream = null;
 const peers = {};
 
 // ---------------------------------------------
@@ -337,33 +339,41 @@ async function toggleCamera() {
 
 // Appelée quand on quitte l'appel
 function stopCall() {
-    document.getElementById("call-panel").classList.remove("call-active");
-    const joinBtn = document.getElementById("joinBtn");
-    if (joinBtn) {
-        joinBtn.style.display = "block";
-        joinBtn.disabled = false;
+    // FIX : stopper le stream original (celui qui tient le vrai micro)
+    if (originalStream) {
+        originalStream.getTracks().forEach(t => t.stop());
+        originalStream = null;
     }
-    // Fermer tous les tracks (caméra + micro)
+
+    // FIX : fermer l'AudioContext pour libérer le micro
+    if (audioCtx) {
+        audioCtx.close();
+        audioCtx = null;
+    }
+
     if (localStream) {
-        localStream.getTracks().forEach(t => t.stop());
+        localStream.getTracks().forEach(t => t.stop()); // ← arrête caméra ET micro
         localStream = null;
     }
 
-    // Fermer toutes les connexions WebRTC
     for (const id in peers) {
         peers[id].pc.close();
         delete peers[id];
     }
 
-    // Notifier les autres qu'on part
     const userId = localStorage.getItem("userId");
     if (ws.readyState === WebSocket.OPEN) {
         ws.send(JSON.stringify({ type: "leave", id: userId }));
     }
 
-    // Réinitialiser l'état
     cameraEnabled = true;
     micEnabled = true;
+
+    // FIX : réinitialiser les boutons
+    const callPanel = document.getElementById("call-panel");
+    if (callPanel) callPanel.classList.remove("call-active");
+    const joinBtn = document.getElementById("joinBtn");
+    if (joinBtn) { joinBtn.style.display = "block"; joinBtn.disabled = false; }
 
     console.log("Appel terminé, caméra et micro fermés.");
 }
@@ -376,34 +386,34 @@ async function resetCamera(withVideo = true) {
                 echoCancellation: true,
                 noiseSuppression: true,
                 autoGainControl: true,
-                // FIX : filtre avancé pour isoler la voix
                 sampleRate: 48000,
-                channelCount: 1 // mono → plus facile à filtrer
+                channelCount: 1
             }
         });
 
-        // Filtre de fréquence pour isoler la voix humaine
-        const audioContext = new AudioContext();
-        const source = audioContext.createMediaStreamSource(stream);
+        originalStream = stream;
 
-        // Filtre passe-haut : coupe les basses fréquences (bruits de ventilateur, etc.)
-        const highPass = audioContext.createBiquadFilter();
+        // FIX : sauvegarder l'AudioContext pour pouvoir le fermer plus tard
+        audioCtx = new AudioContext();
+        const source = audioCtx.createMediaStreamSource(stream);
+
+        const highPass = audioCtx.createBiquadFilter();
         highPass.type = "highpass";
         highPass.frequency.value = 80;
 
-        // Filtre passe-bas : coupe les hautes fréquences (sifflements, etc.)
-        const lowPass = audioContext.createBiquadFilter();
+        const lowPass = audioCtx.createBiquadFilter();
         lowPass.type = "lowpass";
         lowPass.frequency.value = 8000;
 
         source.connect(highPass);
         highPass.connect(lowPass);
 
-        // Reconnecter à un nouveau stream audio filtré
-        const destination = audioContext.createMediaStreamDestination();
+        const destination = audioCtx.createMediaStreamDestination();
         lowPass.connect(destination);
 
-        // Combiner le stream audio filtré avec la vidéo originale
+        // FIX : aussi stopper le stream original
+        audioCtx.originalStream = stream;
+
         const filteredStream = new MediaStream([
             ...stream.getVideoTracks(),
             ...destination.stream.getAudioTracks()

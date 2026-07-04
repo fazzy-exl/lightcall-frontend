@@ -6,6 +6,9 @@ let currentUserId = null;
 let currentChannelId = null;
 let lastMessageUserId = null;
 let currentServerId = null;
+let activeVoiceChannelId = null;
+let activeVoiceServerId = null;
+let activeVoiceServerCode = null;
 
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
@@ -31,6 +34,15 @@ function showPage(id) {
 function navigate(path) {
     history.pushState({}, "", path);
     router();
+
+    // FIX : afficher le mini-call-bar si un call est actif et qu'on n'est pas dans le call
+    const callPanel = document.getElementById("call-panel");
+    const miniBar = document.getElementById("mini-call-bar");
+    if (callPanel && callPanel.classList.contains("call-active") && miniBar) {
+        miniBar.classList.remove("hidden");
+        const miniName = document.getElementById("mini-call-name");
+        if (miniName) miniName.textContent = document.getElementById("call-panel-name").textContent;
+    }
 }
 
 function router() {
@@ -67,6 +79,7 @@ async function loadServers() {
             btn.textContent = server.name;
             btn.dataset.serverId = server.id;
             btn.dataset.serverName = server.name;
+            btn.dataset.serverInviteCode = server.invite_code;
             btn.onclick = () => navigate(`/server/${server.invite_code}/${toSlug(server.name)}`);
             list.appendChild(btn);
         });
@@ -78,7 +91,6 @@ async function loadServer(serverId) {
     currentServerId = serverId;
     currentChannelId = null;
     lastMessageUserId = null;
-    leaveCall();
 
     const chatPanel = document.getElementById("chat-panel");
     const chatPlaceholder = document.getElementById("chat-placeholder");
@@ -141,9 +153,15 @@ async function loadServer(serverId) {
         if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
         setTimeout(() => loadServer(serverId), 2000);
     }
+    // FIX : remettre le highlight du salon vocal actif
+    if (activeVoiceChannelId) {
+        const activeItem = document.querySelector(`.ch-item[data-channel-id="${activeVoiceChannelId}"]`);
+        if (activeItem) activeItem.classList.add("active-voice");
+    }
 }
 
 function openVoiceChannel(channelId, channelName) {
+    activeVoiceServerCode = document.querySelector(`.server-item[data-server-id="${currentServerId}"]`)?.dataset.serverInviteCode || null;
     if (document.getElementById("call-panel").classList.contains("call-active") &&
         document.getElementById("call-panel-name").textContent === channelName) return;
 
@@ -158,6 +176,11 @@ function openVoiceChannel(channelId, channelName) {
     document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
     const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
     if (activeItem) activeItem.classList.add("active-voice");
+    activeVoiceChannelId = channelId;
+    activeVoiceServerId = currentServerId;
+
+    // FIX : cacher le mini-call-bar quand on est dans le call
+    document.getElementById("mini-call-bar").classList.add("hidden");
 
     if (typeof initCallPage === "function") initCallPage(channelId);
     setTimeout(() => { if (typeof startCall === "function") startCall(channelId, videos); }, 100);
@@ -199,14 +222,52 @@ if (miniCallReturn) miniCallReturn.addEventListener("click", () => {
     if (callPanel) callPanel.style.display = "";
     document.getElementById("mini-call-bar").classList.add("hidden");
 
+    // FIX : recharger le bon serveur (celui du call)
+    if (activeVoiceServerId && activeVoiceServerId !== currentServerId) {
+        navigate(`/server/${activeVoiceServerCode}`);
+
+        // FIX : attendre que le serveur charge puis afficher le call
+        setTimeout(() => {
+            const callPanel = document.getElementById("call-panel");
+            if (callPanel) {
+                callPanel.style.display = "";
+                callPanel.classList.add("active");
+            }
+            document.getElementById("chat-panel").classList.remove("active");
+            document.getElementById("chat-placeholder").style.display = "none";
+            document.getElementById("mini-call-bar").classList.add("hidden");
+
+            // Remettre le highlight du salon vocal
+            const channelName = document.getElementById("call-panel-name").textContent;
+            document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
+            document.querySelectorAll(".ch-item").forEach(el => {
+                if (el.textContent.trim().includes(channelName)) el.classList.add("active-voice");
+            });
+
+            // Highlight du serveur actif
+            document.querySelectorAll(".server-item").forEach(el => el.classList.remove("active-server"));
+            const activeServer = document.querySelector(`.server-item[data-server-id="${activeVoiceServerId}"]`);
+            if (activeServer) activeServer.classList.add("active-server");
+
+        }, 800); // ← délai pour laisser le temps au serveur de charger
+        return;
+    }
+
     const channelName = document.getElementById("call-panel-name").textContent;
     document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
     document.querySelectorAll(".ch-item").forEach(el => {
         if (el.textContent.trim().includes(channelName)) el.classList.add("active-voice");
     });
+
+    // FIX : highlight du serveur où est le call, pas le serveur actuel
+    document.querySelectorAll(".server-item").forEach(el => el.classList.remove("active-server"));
+    const activeServer = document.querySelector(`.server-item[data-server-id="${activeVoiceServerId}"]`);
+    if (activeServer) activeServer.classList.add("active-server");
 });
 
 function leaveCall() {
+    activeVoiceChannelId = null;
+    activeVoiceServerId = null;
     const callPanel = document.getElementById("call-panel");
     if (!callPanel) return;
     if (!callPanel.classList.contains("active") && callPanel.style.display !== "none") return;
@@ -1109,7 +1170,16 @@ async function loadServerByCode(inviteCode) {
     showPage("page-server-view");
     currentChannelId = null;
     lastMessageUserId = null;
-    leaveCall();
+
+    // FIX : cacher le call panel sans l'arrêter
+    const callPanel = document.getElementById("call-panel");
+    if (callPanel && callPanel.classList.contains("call-active")) {
+        callPanel.style.display = "none";
+        const miniBar = document.getElementById("mini-call-bar");
+        const miniName = document.getElementById("mini-call-name");
+        if (miniBar) miniBar.classList.remove("hidden");
+        if (miniName) miniName.textContent = document.getElementById("call-panel-name").textContent;
+    }
 
     const chatPanel = document.getElementById("chat-panel");
     const chatPlaceholder = document.getElementById("chat-placeholder");
@@ -1130,6 +1200,11 @@ async function loadServerByCode(inviteCode) {
         }
 
         currentServerId = data.id;
+
+        // FIX : highlight du serveur actif
+        document.querySelectorAll(".server-item").forEach(el => el.classList.remove("active-server"));
+        const activeServer = document.querySelector(`.server-item[data-server-id="${data.id}"]`);
+        if (activeServer) activeServer.classList.add("active-server");
 
         const sidebarName = document.getElementById("server-sidebar-name");
         if (sidebarName) sidebarName.textContent = data.name;
@@ -1175,7 +1250,152 @@ async function loadServerByCode(inviteCode) {
         if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
         setTimeout(() => loadServerByCode(inviteCode), 2000);
     }
+
+    // FIX : remettre le highlight du salon vocal actif
+    if (activeVoiceChannelId) {
+        const activeItem = document.querySelector(`.ch-item[data-channel-id="${activeVoiceChannelId}"]`);
+        if (activeItem) activeItem.classList.add("active-voice");
+    }
 }
+
+// =============================================
+// ACCÈS RAPIDE
+// =============================================
+
+function loadQuickAccess() {
+    const list = document.getElementById("quick-access-list");
+    if (!list) return;
+
+    const saved = JSON.parse(localStorage.getItem("quickAccess") || "[]");
+    list.innerHTML = "";
+
+    saved.forEach((item, index) => {
+        const btn = document.createElement("button");
+        btn.className = "quick-access-item";
+        btn.innerHTML = `
+            <span>${item.icon}</span>
+            <span style="flex:1;overflow:hidden;text-overflow:ellipsis;">${item.label}</span>
+            <span class="qa-remove" data-index="${index}">✕</span>
+        `;
+        btn.onclick = (e) => {
+            if (e.target.classList.contains("qa-remove")) {
+                removeQuickAccess(index);
+                return;
+            }
+            handleQuickAccess(item);
+        };
+        list.appendChild(btn);
+    });
+}
+
+function handleQuickAccess(item) {
+    if (item.type === "settings") {
+        openSettings();
+        // Aller sur le bon onglet
+        setTimeout(() => {
+            document.querySelectorAll(".s-tab").forEach(t => t.classList.remove("active"));
+            document.querySelectorAll(".s-panel").forEach(p => p.classList.remove("active"));
+            const tab = document.querySelector(`.s-tab[data-tab="${item.tab}"]`);
+            const panel = document.querySelector(`.s-panel[data-panel="${item.tab}"]`);
+            if (tab) tab.classList.add("active");
+            if (panel) panel.classList.add("active");
+        }, 50);
+    } else if (item.type === "channel") {
+        navigate(`/server/${item.serverCode}/${item.serverSlug}`);
+        setTimeout(() => {
+            if (item.channelType === "text") openTextChannel(item.channelId, item.channelName);
+            else openVoiceChannel(item.channelId, item.channelName);
+        }, 500);
+    }
+}
+
+function removeQuickAccess(index) {
+    const saved = JSON.parse(localStorage.getItem("quickAccess") || "[]");
+    saved.splice(index, 1);
+    localStorage.setItem("quickAccess", JSON.stringify(saved));
+    loadQuickAccess();
+}
+
+function addQuickAccess(item) {
+    const saved = JSON.parse(localStorage.getItem("quickAccess") || "[]");
+    saved.push(item);
+    localStorage.setItem("quickAccess", JSON.stringify(saved));
+    loadQuickAccess();
+}
+
+// Popup pour choisir quoi ajouter
+const quickAccessAdd = document.getElementById("quick-access-add");
+if (quickAccessAdd) quickAccessAdd.addEventListener("click", () => {
+    // Options disponibles
+    const options = [
+        { label: "⚙️ Mon compte", type: "settings", tab: "account", icon: "⚙️" },
+        { label: "🎨 Apparence", type: "settings", tab: "appearance", icon: "🎨" },
+        { label: "🎙️ Audio et vidéo", type: "settings", tab: "av", icon: "🎙️" },
+        { label: "🔔 Notifications", type: "settings", tab: "notifications", icon: "🔔" },
+    ];
+
+    // Ajouter les salons du serveur actuel
+    document.querySelectorAll(".ch-item").forEach(el => {
+        const channelId = el.dataset.channelId;
+        const channelName = el.textContent.trim();
+        const isVoice = el.innerHTML.includes("🔊");
+        if (channelId) {
+            options.push({
+                label: `${isVoice ? "🔊" : "#"} ${channelName}`,
+                type: "channel",
+                channelId,
+                channelName,
+                channelType: isVoice ? "voice" : "text",
+                serverCode: document.querySelector(".server-item.active-server")?.dataset.serverInviteCode || "",
+                serverSlug: toSlug(document.getElementById("server-sidebar-name")?.textContent || ""),
+                icon: isVoice ? "🔊" : "#"
+            });
+        }
+    });
+
+    // Afficher un menu de sélection
+    const existing = document.getElementById("qa-picker");
+    if (existing) { existing.remove(); return; }
+
+    const picker = document.createElement("div");
+    picker.id = "qa-picker";
+    picker.style.cssText = `
+        position: absolute;
+        bottom: 120px;
+        left: 12px;
+        background: #1e1e1e;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 6px 0;
+        width: 220px;
+        z-index: 9999;
+        box-shadow: 0 4px 16px rgba(0,0,0,0.5);
+        max-height: 300px;
+        overflow-y: auto;
+    `;
+
+    options.forEach(opt => {
+        const div = document.createElement("div");
+        div.style.cssText = "padding:8px 14px;cursor:pointer;font-size:0.85rem;color:white;";
+        div.textContent = opt.label;
+        div.onmouseenter = () => div.style.background = "#2a2a2a";
+        div.onmouseleave = () => div.style.background = "transparent";
+        div.onclick = () => {
+            addQuickAccess(opt);
+            picker.remove();
+            showToast(`"${opt.label}" ajouté aux accès rapides`);
+        };
+        picker.appendChild(div);
+    });
+
+    document.getElementById("sidebar").appendChild(picker);
+    document.addEventListener("click", (e) => {
+        if (!picker.contains(e.target) && e.target !== quickAccessAdd) picker.remove();
+    }, { once: true });
+});
+
+// Charger au démarrage
+loadQuickAccess();
 
 router();
 updateAuthUI();
