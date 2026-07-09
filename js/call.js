@@ -78,6 +78,8 @@ async function startCall(channelId, videosDiv) {
         id: userId,
         channel: channelId
     }));
+
+    joinSound.play().catch(() => {});
 }
 
 // ---------------------------------------------
@@ -284,12 +286,14 @@ async function toggleCamera() {
     if (!container || !videoElement) return;
 
     if (cameraEnabled) {
+        camOffSound.play().catch(() => {});
         localStream.getVideoTracks().forEach(t => t.stop());
         videoElement.srcObject = null;
         container.classList.add("cam-off");
         cameraEnabled = false;
 
     } else {
+        camOnSound.play().catch(() => {});
         // Afficher l'animation
         const spinner = document.createElement("div");
         spinner.className = "cam-loading";
@@ -339,6 +343,8 @@ async function toggleCamera() {
 
 // Appelée quand on quitte l'appel
 function stopCall() {
+    leaveSound.play().catch(() => {});
+
     // FIX : stopper le stream original (celui qui tient le vrai micro)
     if (originalStream) {
         originalStream.getTracks().forEach(t => t.stop());
@@ -564,3 +570,14 @@ function detectSpeaking(stream, videoElement) {
         console.error("Erreur détection voix:", e);
     }
 }
+
+// Sons d'appel
+const joinSound = new Audio("/sounds/join.wav");
+const leaveSound = new Audio("/sounds/leave.wav");
+joinSound.volume = 0.4;
+leaveSound.volume = 0.4;
+
+const camOnSound = new Audio("/sounds/cam-on.wav");
+const camOffSound = new Audio("/sounds/cam-off.wav");
+camOnSound.volume = 0.35;
+camOffSound.volume = 0.35;
