@@ -1394,6 +1394,11 @@ if (quickAccessAdd) quickAccessAdd.addEventListener("click", () => {
     }, { once: true });
 });
 
+// Enregistrement du service worker (rend l'app installable)
+if ("serviceWorker" in navigator) {
+    navigator.serviceWorker.register("/sw.js").catch(err => console.log("SW error:", err));
+}
+
 // Charger au démarrage
 loadQuickAccess();
 
