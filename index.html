@@ -216,6 +216,7 @@
 
 <!-- MENUS CONTEXTUELS & POPUPS -->
 <div id="server-context-menu" class="hidden">
+    <div id="invite-server-option">Inviter des amis</div>
     <div id="rename-server-option">Renommer le serveur</div>
     <div id="delete-server-option">Supprimer le serveur</div>
 </div>
@@ -235,6 +236,18 @@
         <div class="popup-buttons">
             <button id="confirm-rename-server">Renommer</button>
             <button id="cancel-rename-server">Annuler</button>
+        </div>
+    </div>
+</div>
+
+<div id="invite-server-popup" class="popup hidden">
+    <div class="popup-content">
+        <h2>Inviter des amis</h2>
+        <p style="color:#ccc;font-size:0.9rem;margin-bottom:10px;">Partage ce code avec tes amis pour qu'ils rejoignent ton serveur :</p>
+        <input type="text" id="invite-code-display" readonly style="text-align:center;font-weight:bold;font-size:1.1rem;">
+        <div class="popup-buttons">
+            <button id="copy-invite-code" class="special-btn">Copier le code</button>
+            <button id="close-invite-popup" class="special-btn cancel">Fermer</button>
         </div>
     </div>
 </div>

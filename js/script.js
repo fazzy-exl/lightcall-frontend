@@ -422,6 +422,7 @@ async function loadUserProfile() {
 
 const contextMenu = document.getElementById("server-context-menu");
 let selectedServerId = null;
+let selectedServerInviteCode = null;
 let selectedServerName = null;
 
 if (contextMenu) {
@@ -431,6 +432,7 @@ if (contextMenu) {
         e.preventDefault();
         selectedServerId = serverItem.dataset.serverId;
         selectedServerName = serverItem.dataset.serverName;
+        selectedServerInviteCode = serverItem.dataset.serverInviteCode;
         contextMenu.style.left = e.pageX + "px";
         contextMenu.style.top = e.pageY + "px";
         contextMenu.classList.remove("hidden");
@@ -485,6 +487,30 @@ if (confirmRename) confirmRename.onclick = () => {
 
 const renameInput = document.getElementById("rename-server-input");
 if (renameInput) renameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmRename.click(); });
+
+// Il faut stocker aussi l'invite_code du serveur sélectionné dans le clic droit
+// Modifie le listener du contextmenu pour ajouter ça :
+
+const inviteOption = document.getElementById("invite-server-option");
+if (inviteOption) inviteOption.onclick = () => {
+    contextMenu.classList.add("hidden");
+    document.getElementById("invite-code-display").value = selectedServerInviteCode;
+    document.getElementById("invite-server-popup").classList.remove("hidden");
+};
+
+const closeInvitePopup = document.getElementById("close-invite-popup");
+if (closeInvitePopup) closeInvitePopup.onclick = () => {
+    document.getElementById("invite-server-popup").classList.add("hidden");
+};
+
+const copyInviteCode = document.getElementById("copy-invite-code");
+if (copyInviteCode) copyInviteCode.onclick = () => {
+    const input = document.getElementById("invite-code-display");
+    input.select();
+    navigator.clipboard.writeText(input.value).then(() => {
+        showToast("Code copié !");
+    });
+};
 
 const openCreate = document.getElementById("open-create-server");
 const cancelCreate = document.getElementById("cancel-create-server");
@@ -1256,6 +1282,13 @@ async function loadServerByCode(inviteCode) {
         const activeItem = document.querySelector(`.ch-item[data-channel-id="${activeVoiceChannelId}"]`);
         if (activeItem) activeItem.classList.add("active-voice");
     }
+
+    // FIX : remettre le highlight du serveur actif après un refresh
+    setTimeout(() => {
+        document.querySelectorAll(".server-item").forEach(el => el.classList.remove("active-server"));
+        const activeServer = document.querySelector(`.server-item[data-server-invite-code="${inviteCode}"]`);
+        if (activeServer) activeServer.classList.add("active-server");
+    }, 300); // délai pour laisser le temps à loadServers() de remplir la liste
 }
 
 // =============================================
