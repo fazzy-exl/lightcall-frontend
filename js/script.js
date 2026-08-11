@@ -401,13 +401,19 @@ function updateAuthUI() {
 }
 
 async function loadUserProfile() {
-    if (!currentUserId) return;
+    const userIcon = document.getElementById("user-icon");
+
+    if (!currentUserId) {
+        if (userIcon) userIcon.classList.add("ready");
+        return;
+    }
     try {
         const res = await fetch(`${API}/users/${currentUserId}`);
         if (!res.ok) {
             currentUserId = null;
             localStorage.removeItem("userId");
             updateAuthUI();
+            if (userIcon) userIcon.classList.add("ready");
             return;
         }
         const data = await res.json();
@@ -417,7 +423,12 @@ async function loadUserProfile() {
         applyUserAvatar(data.avatar_url);
         currentAvatarDataUrl = data.avatar_url || null;
         currentAvatarOriginalUrl = data.avatar_original || data.avatar_url || null;
-    } catch (err) { console.log("Impossible de charger le profil"); }
+
+        if (userIcon) userIcon.classList.add("ready");
+    } catch (err) {
+        console.log("Impossible de charger le profil");
+        if (userIcon) userIcon.classList.add("ready");
+    }
 }
 
 const contextMenu = document.getElementById("server-context-menu");
@@ -727,6 +738,11 @@ if (logoutBtn) logoutBtn.addEventListener("click", () => {
     const serverList = document.getElementById("server-list");
     if (serverList) serverList.innerHTML = "";
     updateAuthUI();
+
+    // FIX : remettre l'avatar par défaut
+    const bubbleAvatar = document.getElementById("user-avatar");
+    if (bubbleAvatar) bubbleAvatar.src = "/images/default-avatar.png";
+
     navigate("/");
 });
 
