@@ -1448,6 +1448,20 @@ if ("serviceWorker" in navigator) {
     navigator.serviceWorker.register("/sw.js").catch(err => console.log("SW error:", err));
 }
 
+// Empêche le zoom avec Ctrl + molette
+window.addEventListener("wheel", (e) => {
+    if (e.ctrlKey) {
+        e.preventDefault();
+    }
+}, { passive: false });
+
+// Empêche aussi le zoom avec Ctrl + / Ctrl -
+window.addEventListener("keydown", (e) => {
+    if (e.ctrlKey && (e.key === "+" || e.key === "-" || e.key === "=" || e.key === "0")) {
+        e.preventDefault();
+    }
+});
+
 // Charger au démarrage
 loadQuickAccess();
 
