@@ -1564,4 +1564,64 @@ function initGoogleButtons() {
     }
 }
 
+// --- Lier le compte Google (dans les paramètres) ---
+async function loadGoogleLinkStatus() {
+    const statusEl = document.getElementById("google-link-status");
+    const btnContainer = document.getElementById("google-link-btn-container");
+    if (!statusEl || !btnContainer) return;
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}`);
+        const data = await res.json();
+
+        btnContainer.innerHTML = "";
+
+        if (data.google_id) {
+            statusEl.textContent = "Lié ✅";
+            statusEl.style.color = "#43b581";
+        } else {
+            statusEl.textContent = "Non lié";
+            statusEl.style.color = "#72767d";
+
+            if (window.google && window.google.accounts) {
+                google.accounts.id.renderButton(btnContainer, {
+                    theme: "outline",
+                    size: "medium",
+                    text: "continue_with"
+                });
+
+                google.accounts.id.initialize({
+                    client_id: GOOGLE_CLIENT_ID,
+                    callback: handleGoogleLinkCredential
+                });
+            }
+        }
+    } catch (err) {
+        console.error("Erreur chargement statut Google:", err);
+    }
+}
+
+async function handleGoogleLinkCredential(response) {
+    try {
+        const res = await fetch(`${API}/auth/google/link`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ user_id: currentUserId, credential: response.credential })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            showToast(data.error || "Erreur lors de la liaison", "#d9534f");
+            return;
+        }
+
+        showToast("Compte Google lié avec succès !");
+        loadGoogleLinkStatus();
+
+    } catch (err) {
+        console.error("Erreur liaison Google:", err);
+        showToast("Erreur lors de la liaison", "#d9534f");
+    }
+}
+
 initGoogleButtons();
