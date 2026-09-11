@@ -1739,3 +1739,159 @@ if (confirmCreatePassword) confirmCreatePassword.onclick = async () => {
         errorBox.style.display = "block";
     }
 };
+
+// =============================================
+// TUTORIEL D'INTRODUCTION — première ouverture seulement
+// =============================================
+
+const onboardingSteps = [
+    {
+        selector: "#sidebar",
+        title: "Bienvenue sur LightCall ! 👋",
+        text: "Voici ta sidebar — c'est ici que tu retrouves tous tes serveurs et tes messages privés."
+    },
+    {
+        selector: "#server-plus-btn",
+        title: "Créer ou rejoindre un serveur",
+        text: "Clique sur ce bouton + pour créer ton propre serveur ou rejoindre celui d'un ami avec un code d'invitation."
+    },
+    {
+        selector: "#quick-access",
+        title: "Accès rapide",
+        text: "Épingle ici tes salons ou paramètres préférés pour y accéder en un clic, n'importe quand."
+    },
+    {
+        selector: "#user-icon",
+        title: "Ton profil",
+        text: "Clique ici pour te connecter, créer un compte, ou accéder à tes paramètres une fois connecté."
+    }
+];
+
+let onboardingIndex = 0;
+
+function getOnboardingStorageKey() {
+    return "lightcall_onboarding_seen";
+}
+
+function shouldShowOnboarding() {
+    return !localStorage.getItem(getOnboardingStorageKey());
+}
+
+function startOnboarding() {
+    onboardingIndex = 0;
+    document.getElementById("onboarding-overlay").classList.remove("hidden");
+    renderOnboardingStep();
+}
+
+function endOnboarding() {
+    localStorage.setItem(getOnboardingStorageKey(), "true");
+    document.getElementById("onboarding-overlay").classList.add("hidden");
+}
+
+function renderOnboardingStep() {
+    const step = onboardingSteps[onboardingIndex];
+    const spotlight = document.getElementById("onboarding-spotlight");
+    const tooltip = document.getElementById("onboarding-tooltip");
+
+    const target = document.querySelector(step.selector);
+
+    if (target) {
+        const rect = target.getBoundingClientRect();
+        const padding = 8;
+
+        spotlight.style.top = (rect.top - padding) + "px";
+        spotlight.style.left = (rect.left - padding) + "px";
+        spotlight.style.width = (rect.width + padding * 2) + "px";
+        spotlight.style.height = (rect.height + padding * 2) + "px";
+        spotlight.classList.remove("no-target");
+
+        let tooltipLeft = rect.right + 20;
+        let tooltipTop = rect.top;
+
+        // FIX : si ça dépasse à droite, essaie à gauche de l'élément avant de passer en dessous
+        if (tooltipLeft + 300 > window.innerWidth) {
+            const leftPosition = rect.left - 360; // 300px de largeur + 20px de marge
+
+            if (leftPosition >= 20) {
+                // Il y a de la place à gauche
+                tooltipLeft = leftPosition;
+                tooltipTop = rect.top - 8;
+            } else {
+                // Pas de place ni à droite ni à gauche → en dessous
+                tooltipLeft = Math.max(20, rect.left);
+                tooltipTop = rect.bottom + 16;
+            }
+        }
+
+        if (tooltipTop + 220 > window.innerHeight) {
+            tooltipTop = Math.max(20, window.innerHeight - 240);
+        }
+
+        tooltip.style.transform = ""; // reset au cas où on venait du cas "pas d'élément"
+        tooltip.style.top = tooltipTop + "px";
+        tooltip.style.left = tooltipLeft + "px";
+    } else {
+        spotlight.style.top = "40%";
+        spotlight.style.left = "50%";
+        spotlight.style.width = "0px";
+        spotlight.style.height = "0px";
+        tooltip.style.top = "40%";
+        tooltip.style.left = "50%";
+        tooltip.style.transform = "translate(-50%, -50%)";
+    }
+
+    document.getElementById("onboarding-step-label").textContent = `Étape ${onboardingIndex + 1} / ${onboardingSteps.length}`;
+    document.getElementById("onboarding-title").textContent = step.title;
+    document.getElementById("onboarding-text").textContent = step.text;
+
+    const prevBtn = document.getElementById("onboarding-prev");
+    const nextBtn = document.getElementById("onboarding-next");
+    prevBtn.disabled = onboardingIndex === 0;
+    nextBtn.textContent = onboardingIndex === onboardingSteps.length - 1 ? "Terminer" : "Suivant →";
+}
+
+const onboardingNext = document.getElementById("onboarding-next");
+if (onboardingNext) onboardingNext.addEventListener("click", () => {
+    if (onboardingIndex < onboardingSteps.length - 1) {
+        onboardingIndex++;
+        renderOnboardingStep();
+    } else {
+        endOnboarding();
+    }
+});
+
+const onboardingPrev = document.getElementById("onboarding-prev");
+if (onboardingPrev) onboardingPrev.addEventListener("click", () => {
+    if (onboardingIndex > 0) {
+        onboardingIndex--;
+        renderOnboardingStep();
+    }
+});
+
+const onboardingSkip = document.getElementById("onboarding-skip");
+if (onboardingSkip) onboardingSkip.addEventListener("click", endOnboarding);
+
+// Recalcule la position au redimensionnement de la fenêtre
+window.addEventListener("resize", () => {
+    const overlay = document.getElementById("onboarding-overlay");
+    if (overlay && !overlay.classList.contains("hidden")) {
+        renderOnboardingStep();
+    }
+});
+
+// FIX : lance le tutoriel automatiquement à la toute première ouverture seulement
+if (shouldShowOnboarding()) {
+    setTimeout(startOnboarding, 600); // petit délai pour laisser l'UI se charger
+}
+
+// =============================================
+// BANNIÈRE DÉVELOPPEMENT
+// =============================================
+
+document.body.classList.add("has-dev-banner");
+
+const devBannerClose = document.getElementById("dev-banner-close");
+if (devBannerClose) devBannerClose.addEventListener("click", () => {
+    document.getElementById("dev-banner").classList.add("hidden");
+    document.body.classList.remove("has-dev-banner");
+});
