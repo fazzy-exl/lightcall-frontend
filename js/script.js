@@ -1489,3 +1489,78 @@ router();
 updateAuthUI();
 loadUserProfile();
 if (currentUserId) loadServers();
+
+// =============================================
+// CONNEXION AVEC GOOGLE
+// =============================================
+
+const GOOGLE_CLIENT_ID = "914676123797-63ib9p3dbuebopb5dbnn8hdv6umsj708.apps.googleusercontent.com";
+
+async function handleGoogleCredential(response) {
+    try {
+        const res = await fetch(`${API}/auth/google`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ credential: response.credential })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            showToast(data.error || "Erreur de connexion Google", "#d9534f");
+            return;
+        }
+
+        currentUserId = String(data.user_id);
+        localStorage.setItem("userId", currentUserId);
+        updateAuthUI();
+        loadUserProfile();
+        loadServers();
+
+        const loginModal = document.getElementById("login-modal");
+        const signupModal = document.getElementById("signup-modal");
+        if (loginModal) loginModal.style.display = "none";
+        if (signupModal) signupModal.style.display = "none";
+
+        showToast("Connecté avec Google !");
+
+    } catch (err) {
+        console.error("Erreur Google auth:", err);
+        showToast("Erreur de connexion", "#d9534f");
+    }
+}
+
+function initGoogleButtons() {
+    if (!window.google || !window.google.accounts) {
+        // Le script Google n'est pas encore chargé, on réessaie dans 200ms
+        setTimeout(initGoogleButtons, 200);
+        return;
+    }
+
+    google.accounts.id.initialize({
+        client_id: GOOGLE_CLIENT_ID,
+        callback: handleGoogleCredential
+    });
+
+    const loginBtnDiv = document.getElementById("google-login-btn");
+    const signupBtnDiv = document.getElementById("google-signup-btn");
+
+    if (loginBtnDiv) {
+        google.accounts.id.renderButton(loginBtnDiv, {
+            theme: "outline",
+            size: "large",
+            width: 280,
+            text: "signin_with"
+        });
+    }
+
+    if (signupBtnDiv) {
+        google.accounts.id.renderButton(signupBtnDiv, {
+            theme: "outline",
+            size: "large",
+            width: 280,
+            text: "signup_with"
+        });
+    }
+}
+
+initGoogleButtons();
