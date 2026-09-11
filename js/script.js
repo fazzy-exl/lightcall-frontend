@@ -761,6 +761,7 @@ function openSettings() {
     loadSettingsAV();
     loadSettingsNotifications();
     loadSettingsCloseBehavior();
+    loadGoogleLinkStatus();
 }
 
 function closeSettings() { navigate("/"); }
