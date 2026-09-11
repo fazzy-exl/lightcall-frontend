@@ -1586,25 +1586,31 @@ async function loadGoogleLinkStatus() {
             unlinkBtn.className = "special-btn cancel";
             unlinkBtn.style.cssText = "width:auto;padding:6px 14px;font-size:0.85rem;background:#d9534f;";
             unlinkBtn.onclick = async () => {
-                try {
-                    const res = await fetch(`${API}/auth/google/unlink`, {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify({ user_id: currentUserId })
-                    });
-                    const data = await res.json();
+                // Vérifie d'abord si l'utilisateur a un mot de passe
+                const checkRes = await fetch(`${API}/users/${currentUserId}`);
+                const checkData = await checkRes.json();
 
-                    if (!res.ok || !data.success) {
-                        showToast(data.error || "Erreur lors de la déliaison", "#d9534f");
-                        return;
+                if (checkData.password_hash === false || !checkData.has_password) {
+                    // Pas de mot de passe → afficher la popup d'avertissement
+                    document.getElementById("google-unlink-popup").classList.remove("hidden");
+                } else {
+                    // A déjà un mot de passe → délier directement
+                    try {
+                        const res = await fetch(`${API}/auth/google/unlink`, {
+                            method: "POST",
+                            headers: { "Content-Type": "application/json" },
+                            body: JSON.stringify({ user_id: currentUserId })
+                        });
+                        const data = await res.json();
+                        if (!res.ok || !data.success) {
+                            showToast(data.error || "Erreur", "#d9534f");
+                            return;
+                        }
+                        showToast("Compte Google délié");
+                        loadGoogleLinkStatus();
+                    } catch (err) {
+                        showToast("Erreur lors de la déliaison", "#d9534f");
                     }
-
-                    showToast("Compte Google délié");
-                    loadGoogleLinkStatus();
-
-                } catch (err) {
-                    console.error("Erreur déliaison:", err);
-                    showToast("Erreur lors de la déliaison", "#d9534f");
                 }
             };
             btnContainer.appendChild(unlinkBtn);
@@ -1655,3 +1661,81 @@ async function handleGoogleLinkCredential(response) {
 }
 
 initGoogleButtons();
+
+// --- Popup avertissement Google unlink ---
+const unlinkCancel = document.getElementById("unlink-cancel");
+if (unlinkCancel) unlinkCancel.onclick = () => {
+    document.getElementById("google-unlink-popup").classList.add("hidden");
+};
+
+const unlinkCreatePassword = document.getElementById("unlink-create-password");
+if (unlinkCreatePassword) unlinkCreatePassword.onclick = () => {
+    document.getElementById("google-unlink-popup").classList.add("hidden");
+    document.getElementById("create-password-popup").classList.remove("hidden");
+};
+
+const unlinkDeleteAccount = document.getElementById("unlink-delete-account");
+if (unlinkDeleteAccount) unlinkDeleteAccount.onclick = async () => {
+    const confirmDelete = confirm("Es-tu vraiment sûr de vouloir supprimer ton compte ? Cette action est irréversible.");
+    if (!confirmDelete) return;
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            showToast(data.error || "Erreur lors de la suppression", "#d9534f");
+            return;
+        }
+        showToast("Compte supprimé");
+        currentUserId = null;
+        localStorage.removeItem("userId");
+        navigate("/");
+        setTimeout(() => location.reload(), 500);
+    } catch (err) {
+        showToast("Erreur lors de la suppression", "#d9534f");
+    }
+};
+
+// --- Popup créer mot de passe ---
+const cancelCreatePassword = document.getElementById("cancel-create-password");
+if (cancelCreatePassword) cancelCreatePassword.onclick = () => {
+    document.getElementById("create-password-popup").classList.add("hidden");
+};
+
+const confirmCreatePassword = document.getElementById("confirm-create-password");
+if (confirmCreatePassword) confirmCreatePassword.onclick = async () => {
+    const input = document.getElementById("new-account-password");
+    const errorBox = document.getElementById("create-password-error");
+    errorBox.style.display = "none";
+
+    const password = input.value;
+    if (!password) {
+        errorBox.textContent = "Entre un mot de passe.";
+        errorBox.style.display = "block";
+        return;
+    }
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}/create-password`, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ new_password: password })
+        });
+        const data = await res.json();
+
+        if (!res.ok || !data.success) {
+            errorBox.textContent = data.error || "Erreur lors de la création";
+            errorBox.style.display = "block";
+            return;
+        }
+
+        input.value = "";
+        document.getElementById("create-password-popup").classList.add("hidden");
+        showToast("Mot de passe créé ! Tu peux maintenant délier Google en sécurité.");
+        loadGoogleLinkStatus();
+
+    } catch (err) {
+        errorBox.textContent = "Erreur de connexion";
+        errorBox.style.display = "block";
+    }
+};
