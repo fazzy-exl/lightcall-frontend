@@ -403,17 +403,17 @@ function updateAuthUI() {
 async function loadUserProfile() {
     const userIcon = document.getElementById("user-icon");
 
-    if (!currentUserId) {
-        if (userIcon) userIcon.classList.add("ready");
-        return;
-    }
+    // FIX : afficher la bulle immédiatement, peu importe l'état
+    if (userIcon) userIcon.classList.add("ready");
+
+    if (!currentUserId) return;
+
     try {
         const res = await fetch(`${API}/users/${currentUserId}`);
         if (!res.ok) {
             currentUserId = null;
             localStorage.removeItem("userId");
             updateAuthUI();
-            if (userIcon) userIcon.classList.add("ready");
             return;
         }
         const data = await res.json();
@@ -423,11 +423,8 @@ async function loadUserProfile() {
         applyUserAvatar(data.avatar_url);
         currentAvatarDataUrl = data.avatar_url || null;
         currentAvatarOriginalUrl = data.avatar_original || data.avatar_url || null;
-
-        if (userIcon) userIcon.classList.add("ready");
     } catch (err) {
         console.log("Impossible de charger le profil");
-        if (userIcon) userIcon.classList.add("ready");
     }
 }
 
@@ -763,6 +760,7 @@ function openSettings() {
     loadSettingsAppearance();
     loadSettingsAV();
     loadSettingsNotifications();
+    loadSettingsCloseBehavior();
 }
 
 function closeSettings() { navigate("/"); }
@@ -941,6 +939,28 @@ function loadSettingsNotifications() {
         const newState = !toggle.classList.contains("on");
         toggle.classList.toggle("on", newState);
         localStorage.setItem("notificationsEnabled", newState);
+    };
+}
+
+async function loadSettingsCloseBehavior() {
+    const row = document.getElementById("close-behavior-row");
+    if (!row) return;
+
+    if (!window.electronAPI) {
+        row.style.display = "none";
+        return;
+    }
+
+    row.style.display = "";
+    const toggle = document.getElementById("toggle-close-tray");
+    const enabled = await window.electronAPI.getCloseToTray();
+    toggle.classList.toggle("on", enabled);
+
+    toggle.onclick = async () => {
+        const newState = !toggle.classList.contains("on");
+        toggle.classList.toggle("on", newState);
+        await window.electronAPI.setCloseToTray(newState);
+        showToast(newState ? "L'app restera dans la barre système" : "L'app se fermera complètement");
     };
 }
 
