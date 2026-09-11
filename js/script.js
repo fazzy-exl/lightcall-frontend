@@ -1579,6 +1579,36 @@ async function loadGoogleLinkStatus() {
         if (data.google_id) {
             statusEl.textContent = "Lié ✅";
             statusEl.style.color = "#43b581";
+
+            // FIX : bouton pour délier
+            const unlinkBtn = document.createElement("button");
+            unlinkBtn.textContent = "Délier";
+            unlinkBtn.className = "special-btn cancel";
+            unlinkBtn.style.cssText = "width:auto;padding:6px 14px;font-size:0.85rem;background:#d9534f;";
+            unlinkBtn.onclick = async () => {
+                try {
+                    const res = await fetch(`${API}/auth/google/unlink`, {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ user_id: currentUserId })
+                    });
+                    const data = await res.json();
+
+                    if (!res.ok || !data.success) {
+                        showToast(data.error || "Erreur lors de la déliaison", "#d9534f");
+                        return;
+                    }
+
+                    showToast("Compte Google délié");
+                    loadGoogleLinkStatus();
+
+                } catch (err) {
+                    console.error("Erreur déliaison:", err);
+                    showToast("Erreur lors de la déliaison", "#d9534f");
+                }
+            };
+            btnContainer.appendChild(unlinkBtn);
+
         } else {
             statusEl.textContent = "Non lié";
             statusEl.style.color = "#72767d";
