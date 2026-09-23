@@ -542,7 +542,7 @@ if (confirmCreate) confirmCreate.onclick = () => {
     }).then(res => res.json()).then(data => {
         document.getElementById("create-server-popup").classList.add("hidden");
         serverNameInput.value = "";
-        loadServers().then(() => navigate(`/server/${data.server_id}`));
+        loadServers().then(() => navigate(`/server/${data.invite_code}/${toSlug(name)}`));
     });
 };
 if (serverNameInput) serverNameInput.addEventListener("keydown", e => { if (e.key === "Enter") confirmCreate.click(); });
@@ -570,7 +570,7 @@ if (confirmJoin) confirmJoin.onclick = () => {
         alert("Tu as rejoint : " + data.server_name);
         document.getElementById("join-server-popup").classList.add("hidden");
         joinInput.value = "";
-        navigate(`/server/${data.server_id}`);
+        navigate(`/server/${data.invite_code}/${toSlug(data.server_name)}`);
     });
 };
 
