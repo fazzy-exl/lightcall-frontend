@@ -866,6 +866,28 @@ if (settingsPasswordSubmit) settingsPasswordSubmit.addEventListener("click", asy
 const settingsLogout = document.getElementById("settings-logout");
 if (settingsLogout) settingsLogout.addEventListener("click", () => { if (logoutBtn) logoutBtn.click(); });
 
+const settingsDeleteAccount = document.getElementById("settings-delete-account");
+if (settingsDeleteAccount) settingsDeleteAccount.addEventListener("click", async () => {
+    const confirmDelete = confirm("Es-tu vraiment sûr de vouloir supprimer ton compte ? Cette action est irréversible et supprimera tous tes serveurs, messages et données.");
+    if (!confirmDelete) return;
+
+    try {
+        const res = await fetch(`${API}/users/${currentUserId}`, { method: "DELETE" });
+        const data = await res.json();
+        if (!res.ok || !data.success) {
+            showToast(data.error || "Erreur lors de la suppression", "#d9534f");
+            return;
+        }
+        showToast("Compte supprimé");
+        currentUserId = null;
+        localStorage.removeItem("userId");
+        navigate("/");
+        setTimeout(() => location.reload(), 500);
+    } catch (err) {
+        showToast("Erreur lors de la suppression", "#d9534f");
+    }
+});
+
 function loadSettingsAppearance() {
     const row = document.getElementById("settings-color-row");
     if (!row) return;
