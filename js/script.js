@@ -887,11 +887,15 @@ if (confirmDeleteAccount) confirmDeleteAccount.addEventListener("click", async (
             showToast(data.error || "Erreur lors de la suppression", "#d9534f");
             return;
         }
-        showToast("Compte supprimé");
+
         currentUserId = null;
         localStorage.removeItem("userId");
-        navigate("/");
-        setTimeout(() => location.reload(), 500);
+        showToast("Compte supprimé");
+
+        setTimeout(() => {
+            window.location.href = "/"; // ← force un vrai rechargement vers la page d'accueil
+        }, 800);
+
     } catch (err) {
         showToast("Erreur lors de la suppression", "#d9534f");
     }
