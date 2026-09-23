@@ -867,9 +867,18 @@ const settingsLogout = document.getElementById("settings-logout");
 if (settingsLogout) settingsLogout.addEventListener("click", () => { if (logoutBtn) logoutBtn.click(); });
 
 const settingsDeleteAccount = document.getElementById("settings-delete-account");
-if (settingsDeleteAccount) settingsDeleteAccount.addEventListener("click", async () => {
-    const confirmDelete = confirm("Es-tu vraiment sûr de vouloir supprimer ton compte ? Cette action est irréversible et supprimera tous tes serveurs, messages et données.");
-    if (!confirmDelete) return;
+if (settingsDeleteAccount) settingsDeleteAccount.addEventListener("click", () => {
+    document.getElementById("delete-account-confirm").classList.remove("hidden");
+});
+
+const cancelDeleteAccount = document.getElementById("cancel-delete-account");
+if (cancelDeleteAccount) cancelDeleteAccount.addEventListener("click", () => {
+    document.getElementById("delete-account-confirm").classList.add("hidden");
+});
+
+const confirmDeleteAccount = document.getElementById("confirm-delete-account");
+if (confirmDeleteAccount) confirmDeleteAccount.addEventListener("click", async () => {
+    document.getElementById("delete-account-confirm").classList.add("hidden");
 
     try {
         const res = await fetch(`${API}/users/${currentUserId}`, { method: "DELETE" });
