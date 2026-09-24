@@ -1951,3 +1951,47 @@ if (devBannerClose) devBannerClose.addEventListener("click", () => {
     document.getElementById("dev-banner").classList.add("hidden");
     document.body.classList.remove("has-dev-banner");
 });
+
+// =============================================
+// SÉLECTEUR D'EMOJI
+// =============================================
+
+const EMOJI_LIST = [
+    "😀","😂","😍","😎","🤔","😢","😡","😱","👍","👎",
+    "🙏","👏","🔥","💯","❤️","🎉","😴","🤝","👀","💀",
+    "😅","😭","🥳","🤯","😏","😳","🫡","😤","🙄","🤡",
+    "✅","❌","⚡","💡","🎮","🎵","📷","💻","🚀","⭐"
+];
+
+function buildEmojiPicker() {
+    const picker = document.getElementById("emoji-picker");
+    if (!picker || picker.dataset.built) return;
+    picker.dataset.built = "true";
+
+    EMOJI_LIST.forEach(emoji => {
+        const btn = document.createElement("button");
+        btn.className = "emoji-item";
+        btn.textContent = emoji;
+        btn.onclick = () => {
+            const input = document.getElementById("chat-input");
+            input.value += emoji;
+            input.focus();
+        };
+        picker.appendChild(btn);
+    });
+}
+
+const emojiBtn = document.getElementById("emoji-btn");
+const emojiPicker = document.getElementById("emoji-picker");
+
+if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
+    e.stopPropagation();
+    buildEmojiPicker();
+    emojiPicker.classList.toggle("hidden");
+});
+
+document.addEventListener("click", (e) => {
+    if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+        emojiPicker.classList.add("hidden");
+    }
+});
