@@ -23,6 +23,21 @@ function connectTextWs() {
         if (data.type === "text_message" && data.channel_id == currentChannelId) {
             if (String(data.user_id) !== String(currentUserId)) {
                 appendMessage(data);
+                scrollToBottom();
+            }
+        }
+    };
+
+    textWs.onclose = () => {
+        setTimeout(connectTextWs, 2000);
+    };
+
+    textWs.onerror = () => {
+        textWs.close();
+    };
+}
+
+connectTextWs();
 
 function showPage(id) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
