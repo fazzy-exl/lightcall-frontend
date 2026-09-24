@@ -1452,7 +1452,6 @@ function addQuickAccess(item) {
 // Popup pour choisir quoi ajouter
 const quickAccessAdd = document.getElementById("quick-access-add");
 if (quickAccessAdd) quickAccessAdd.addEventListener("click", () => {
-    // Options disponibles
     const options = [
         { label: "⚙️ Mon compte", type: "settings", tab: "account", icon: "⚙️" },
         { label: "🎨 Apparence", type: "settings", tab: "appearance", icon: "🎨" },
@@ -1460,7 +1459,6 @@ if (quickAccessAdd) quickAccessAdd.addEventListener("click", () => {
         { label: "🔔 Notifications", type: "settings", tab: "notifications", icon: "🔔" },
     ];
 
-    // Ajouter les salons du serveur actuel
     document.querySelectorAll(".ch-item").forEach(el => {
         const channelId = el.dataset.channelId;
         const channelName = el.textContent.trim();
@@ -1479,7 +1477,6 @@ if (quickAccessAdd) quickAccessAdd.addEventListener("click", () => {
         }
     });
 
-    // Afficher un menu de sélection
     const existing = document.getElementById("qa-picker");
     if (existing) { existing.remove(); return; }
 
@@ -1956,19 +1953,40 @@ if (devBannerClose) devBannerClose.addEventListener("click", () => {
 // SÉLECTEUR D'EMOJI
 // =============================================
 
-const EMOJI_LIST = [
-    "😀","😂","😍","😎","🤔","😢","😡","😱","👍","👎",
-    "🙏","👏","🔥","💯","❤️","🎉","😴","🤝","👀","💀",
-    "😅","😭","🥳","🤯","😏","😳","🫡","😤","🙄","🤡",
-    "✅","❌","⚡","💡","🎮","🎵","📷","💻","🚀","⭐"
+const EMOJI_CATEGORIES = {
+    smileys: ["😀","😂","😍","😎","🤔","😢","😡","😱","😅","😭","🥳","🤯","😏","😳","🫡","😤","🙄","🤡","😴","👀"],
+    gestures: ["👍","👎","🙏","👏","🤝","✌️","🤞","👊","🫶","🙌","💪","👋","🤙","☝️","👌"],
+    objects: ["🔥","💯","❤️","🎉","💀","⚡","💡","🎮","🎵","📷","💻","🚀","⭐","🎁","💰"],
+    symbols: ["✅","❌","⭐","💢","‼️","❓","💤","🔔","🚫","⚠️","♻️","🔁"]
+};
+
+// FIX : catégorie "Tous" générée automatiquement
+EMOJI_CATEGORIES.all = [
+    ...EMOJI_CATEGORIES.smileys,
+    ...EMOJI_CATEGORIES.gestures,
+    ...EMOJI_CATEGORIES.objects,
+    ...EMOJI_CATEGORIES.symbols
 ];
 
-function buildEmojiPicker() {
-    const picker = document.getElementById("emoji-picker");
-    if (!picker || picker.dataset.built) return;
-    picker.dataset.built = "true";
+let currentEmojiCategory = "all";
 
-    EMOJI_LIST.forEach(emoji => {
+function buildEmojiPicker() {
+    renderEmojiGrid(currentEmojiCategory);
+
+    document.querySelectorAll(".emoji-tab").forEach(tab => {
+        tab.onclick = () => {
+            document.querySelectorAll(".emoji-tab").forEach(t => t.classList.remove("active"));
+            tab.classList.add("active");
+            currentEmojiCategory = tab.dataset.cat;
+            renderEmojiGrid(currentEmojiCategory);
+        };
+    });
+}
+
+function renderEmojiGrid(category) {
+    const grid = document.getElementById("emoji-grid");
+    grid.innerHTML = "";
+    EMOJI_CATEGORIES[category].forEach(emoji => {
         const btn = document.createElement("button");
         btn.className = "emoji-item";
         btn.textContent = emoji;
@@ -1977,7 +1995,7 @@ function buildEmojiPicker() {
             input.value += emoji;
             input.focus();
         };
-        picker.appendChild(btn);
+        grid.appendChild(btn);
     });
 }
 
@@ -1987,11 +2005,16 @@ const emojiPicker = document.getElementById("emoji-picker");
 if (emojiBtn) emojiBtn.addEventListener("click", (e) => {
     e.stopPropagation();
     buildEmojiPicker();
+
+    const rect = emojiBtn.getBoundingClientRect();
+    emojiPicker.style.left = rect.left + "px";
+    emojiPicker.style.bottom = (window.innerHeight - rect.top + 20) + "px";
+
     emojiPicker.classList.toggle("hidden");
 });
 
 document.addEventListener("click", (e) => {
-    if (emojiPicker && !emojiPicker.contains(e.target) && e.target !== emojiBtn) {
+    if (emojiPicker && !emojiPicker.contains(e.target) && !emojiBtn.contains(e.target)) {
         emojiPicker.classList.add("hidden");
     }
 });

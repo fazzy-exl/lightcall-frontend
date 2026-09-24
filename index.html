@@ -119,7 +119,16 @@
                     <button id="chat-send-btn">↑</button>
                 </div>
 
-                <div id="emoji-picker" class="hidden"></div>
+                <div id="emoji-picker" class="hidden">
+                    <div id="emoji-picker-tabs">
+                        <button class="emoji-tab active" data-cat="all">🌐</button>
+                        <button class="emoji-tab" data-cat="smileys">🙂</button>
+                        <button class="emoji-tab" data-cat="gestures">👍</button>
+                        <button class="emoji-tab" data-cat="objects">💡</button>
+                        <button class="emoji-tab" data-cat="symbols">✅</button>
+                    </div>
+                    <div id="emoji-grid"></div>
+                </div>
             </div>
 
             <!-- Panneau appel vocal (dans la page serveur) -->

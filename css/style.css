@@ -413,7 +413,7 @@ h1 {
     padding: 16px;
     display: flex;
     flex-direction: column;
-    gap: 4px;
+    gap: 0px; /* ← retire le gap, laisse les margin-top faire le travail */
     min-height: 0;
 }
 #chat-messages::-webkit-scrollbar { width: 6px; }
@@ -424,7 +424,7 @@ h1 {
 .chat-message {
     display: flex;
     gap: 14px;
-    padding: 6px 12px;
+    padding: 2px 12px; /* ← réduit le padding vertical pour les messages groupés */
     align-items: flex-start;
     border-radius: 6px;
     transition: background 0.1s;
@@ -436,6 +436,7 @@ h1 {
     flex-shrink: 0;
     position: relative;
     margin-top: 2px;
+    min-height: 0; /* ← empêche de prendre de la hauteur inutile */
 }
 
 .chat-avatar,
@@ -470,6 +471,11 @@ h1 {
 .chat-message.continuation .chat-avatar-img {
     visibility: hidden;
 }
+.chat-message.continuation .chat-avatar-slot {
+    height: 0;
+    min-height: 0;
+    overflow: visible; /* garde le time-hover visible au survol malgré la hauteur 0 */
+}
 .chat-message.continuation:hover .chat-time-hover {
     display: block;
 }
@@ -497,7 +503,19 @@ h1 {
     user-select: text;
 }
 
-.chat-message.continuation { padding-top: 1px; }
+.chat-message.continuation {
+    padding-top: 0px; /* ← colle davantage les messages du même auteur */
+    margin-top: 0px;
+}
+/* Ajoute un espace supplémentaire avant un nouveau message d'une personne différente */
+.chat-message:not(.continuation) {
+    margin-top: 12px;
+}
+
+.chat-message:not(.continuation):first-child {
+    margin-top: 0;
+}
+
 .chat-message.continuation .chat-meta { display: none; }
 
 /* Loading & vide */
@@ -1654,32 +1672,90 @@ body.has-dev-banner #main-content {
 #emoji-btn:hover { background: #32363b; }
 
 #emoji-picker {
-    position: absolute;
-    bottom: 70px;
-    right: 20px;
-    width: 320px;
-    max-height: 280px;
-    overflow-y: auto;
+    position: fixed;
+    width: 340px;
+    height: 280px;
     background: #1e1e1e;
-    border: 1px solid #333;
+    border: 1px solid #2a2a2a;
     border-radius: 10px;
-    padding: 10px;
-    display: grid;
-    grid-template-columns: repeat(8, 1fr);
-    gap: 4px;
-    z-index: 9999;
     box-shadow: 0 8px 32px rgba(0,0,0,0.6);
+    z-index: 9999;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
 }
 
 #emoji-picker.hidden { display: none; }
 
+#emoji-picker-tabs {
+    display: flex;
+    border-bottom: 1px solid #2a2a2a;
+    padding: 6px 8px;
+    gap: 4px;
+    flex-shrink: 0;
+}
+
+.emoji-tab {
+    background: transparent;
+    border: none;
+    color: #72767d;
+    font-size: 1.1rem;
+    padding: 6px 8px;
+    border-radius: 6px;
+    cursor: pointer;
+    flex: 1;
+}
+.emoji-tab:hover { background: #2a2d31; color: #dcddde; }
+.emoji-tab.active {
+    background: linear-gradient(#2a2d31, #2a2d31) padding-box,
+    linear-gradient(135deg, #ff4d8f, #ff7c2a) border-box;
+    border: 1px solid transparent;
+    color: white;
+}
+
+#emoji-grid {
+    padding: 10px;
+    overflow-y: auto;
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 2px;
+}
+#emoji-grid::-webkit-scrollbar { width: 6px; }
+#emoji-grid::-webkit-scrollbar-thumb {
+    background: linear-gradient(180deg, #ff4d8f, #ff7c2a);
+    border-radius: 3px;
+}
+
 .emoji-item {
-    font-size: 1.3rem;
+    font-size: 1.35rem;
     background: transparent;
     border: none;
     cursor: pointer;
     border-radius: 6px;
-    padding: 4px;
+    padding: 6px;
     text-align: center;
+    line-height: 1;
+    transition: background 0.1s, transform 0.1s;
 }
-.emoji-item:hover { background: #2a2d31; }
+.emoji-item:hover {
+    background: #2a2d31;
+    transform: scale(1.15);
+}
+
+#emoji-btn {
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    background: #2a2d31;
+    color: #dcddde;
+    border: none;
+    font-size: 1.2rem;
+    cursor: pointer;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    transition: background 0.15s;
+}
+#emoji-btn:hover { background: #32363b; }
