@@ -1,5 +1,3 @@
-console.log("Call.js chargé");
-
 // ---------------------------------------------
 // WebSocket — une seule connexion globale
 // ---------------------------------------------

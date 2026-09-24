@@ -1,5 +1,3 @@
-console.log("LightCall script chargé");
-
 const API = "https://lightcall-backend.onrender.com";
 
 let currentUserId = null;
@@ -13,17 +11,18 @@ let activeVoiceServerCode = null;
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
 
-const textWs = new WebSocket("wss://lightcall-backend.onrender.com");
-textWs.onopen = () => console.log("Text WS connecté");
-textWs.onmessage = (event) => {
-    const data = JSON.parse(event.data);
-    if (data.type === "text_message" && data.channel_id == currentChannelId) {
-        if (String(data.user_id) !== String(currentUserId)) {
-            appendMessage(data);
-            scrollToBottom();
-        }
-    }
-};
+let textWs;
+
+function connectTextWs() {
+    textWs = new WebSocket("wss://lightcall-backend.onrender.com");
+
+    textWs.onopen = () => {};
+
+    textWs.onmessage = (event) => {
+        const data = JSON.parse(event.data);
+        if (data.type === "text_message" && data.channel_id == currentChannelId) {
+            if (String(data.user_id) !== String(currentUserId)) {
+                appendMessage(data);
 
 function showPage(id) {
     document.querySelectorAll(".page").forEach(p => p.classList.remove("active"));
