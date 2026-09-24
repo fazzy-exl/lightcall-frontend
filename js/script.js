@@ -301,25 +301,32 @@ async function loadMessages(channelId) {
     }
 }
 
-function appendMessage(msg) {
-    const messagesDiv = document.getElementById("chat-messages");
-    if (!messagesDiv) return;
+                function appendMessage(msg) {
+                    const messagesDiv = document.getElementById("chat-messages");
+                    if (!messagesDiv) return;
 
-    const emptyMsg = messagesDiv.querySelector(".chat-empty");
-    if (emptyMsg) emptyMsg.remove();
+                    const emptyMsg = messagesDiv.querySelector(".chat-empty");
+                    if (emptyMsg) emptyMsg.remove();
 
-    const isContinuation = String(msg.user_id) === String(lastMessageUserId);
-    lastMessageUserId = msg.user_id;
+                    const isContinuation = String(msg.user_id) === String(lastMessageUserId);
+                    lastMessageUserId = msg.user_id;
 
-    const div = document.createElement("div");
-    div.className = "chat-message" + (isContinuation ? " continuation" : "");
+                    const div = document.createElement("div");
+                    div.className = "chat-message" + (isContinuation ? " continuation" : "");
 
-    const time = new Date(msg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    const initial = (msg.username || "?").charAt(0).toUpperCase();
-    const color = stringToColor(msg.username || "");
+                    const time = new Date(msg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+                    const initial = (msg.username || "?").charAt(0).toUpperCase();
+                    const color = stringToColor(msg.username || "");
 
-    div.innerHTML = `
-        <div class="chat-avatar" style="background:${color}">${initial}</div>
+                    const avatarHtml = msg.avatar_url
+                        ? `<img class="chat-avatar-img" src="${msg.avatar_url}" alt="">`
+                        : `<div class="chat-avatar" style="background:${color}">${initial}</div>`;
+
+                    div.innerHTML = `
+        <div class="chat-avatar-slot">
+            ${avatarHtml}
+            <span class="chat-time-hover">${time}</span>
+        </div>
         <div class="chat-bubble">
             <div class="chat-meta">
                 <span class="chat-username" style="color:${color}">${escapeHtml(msg.username)}</span>
@@ -328,7 +335,7 @@ function appendMessage(msg) {
             <div class="chat-text">${escapeHtml(msg.content)}</div>
         </div>
     `;
-    messagesDiv.appendChild(div);
+                    messagesDiv.appendChild(div);
 }
 
 async function sendMessage() {

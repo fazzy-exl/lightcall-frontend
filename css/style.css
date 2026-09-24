@@ -423,59 +423,82 @@ h1 {
 /* Message individuel */
 .chat-message {
     display: flex;
-    gap: 12px;
-    padding: 4px 0;
+    gap: 14px;
+    padding: 6px 12px;
     align-items: flex-start;
+    border-radius: 6px;
+    transition: background 0.1s;
 }
-.chat-message:hover { background: rgba(255,255,255,0.02); border-radius: 4px; padding: 4px 6px; margin: 0 -6px; }
-.chat-avatar {
-    width: 36px;
-    height: 36px;
+.chat-message:hover { background: rgba(255,255,255,0.03); }
+
+.chat-avatar-slot {
+    width: 40px;
+    flex-shrink: 0;
+    position: relative;
+    margin-top: 2px;
+}
+
+.chat-avatar,
+.chat-avatar-img {
+    width: 40px;
+    height: 40px;
     border-radius: 50%;
-    background: #5865f2;
+    flex-shrink: 0;
+    object-fit: cover;
+}
+.chat-avatar {
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 14px;
+    font-size: 15px;
     font-weight: bold;
     color: white;
-    flex-shrink: 0;
-    margin-top: 2px;
 }
+
+.chat-time-hover {
+    display: none;
+    position: absolute;
+    top: 4px;
+    left: 0;
+    width: 40px;
+    text-align: center;
+    font-size: 0.65rem;
+    color: #72767d;
+}
+
+.chat-message.continuation .chat-avatar,
+.chat-message.continuation .chat-avatar-img {
+    visibility: hidden;
+}
+.chat-message.continuation:hover .chat-time-hover {
+    display: block;
+}
+
 .chat-bubble { flex: 1; min-width: 0; }
 .chat-meta {
     display: flex;
     align-items: baseline;
     gap: 8px;
-    margin-bottom: 2px;
+    margin-bottom: 3px;
 }
 .chat-username {
-    font-size: 0.9rem;
-    font-weight: bold;
-    color: #7289da;
+    font-size: 0.95rem;
+    font-weight: 600;
 }
 .chat-time {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: #72767d;
 }
 .chat-text {
     font-size: 0.9rem;
     color: #dcddde;
-    line-height: 1.5;
+    line-height: 1.45;
     word-break: break-word;
     user-select: text;
 }
 
-/* Groupe de messages consécutifs du même auteur */
-.chat-message.continuation {
-    padding-top: 1px;
-}
-.chat-message.continuation .chat-avatar {
-    visibility: hidden;
-}
-.chat-message.continuation .chat-meta {
-    display: none;
-}
+.chat-message.continuation { padding-top: 1px; }
+.chat-message.continuation .chat-meta { display: none; }
 
 /* Loading & vide */
 .chat-loading, .chat-empty {
