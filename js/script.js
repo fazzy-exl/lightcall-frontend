@@ -1,3 +1,6 @@
+debugger;
+console.log("LightCall script chargé");
+
 const API = "https://lightcall-backend.onrender.com";
 
 let currentUserId = null;
@@ -7,6 +10,9 @@ let currentServerId = null;
 let activeVoiceChannelId = null;
 let activeVoiceServerId = null;
 let activeVoiceServerCode = null;
+let lastOpenedChannelId = null;
+let lastOpenedChannelName = null;
+let lastOpenedChannelType = null; // "text" ou "voice"
 
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
@@ -175,6 +181,10 @@ async function loadServer(serverId) {
 }
 
 function openVoiceChannel(channelId, channelName) {
+    lastOpenedChannelId = channelId;
+    lastOpenedChannelName = channelName;
+    lastOpenedChannelType = "voice";
+
     activeVoiceServerCode = document.querySelector(`.server-item[data-server-id="${currentServerId}"]`)?.dataset.serverInviteCode || null;
     if (document.getElementById("call-panel").classList.contains("call-active") &&
         document.getElementById("call-panel-name").textContent === channelName) return;
@@ -198,9 +208,15 @@ function openVoiceChannel(channelId, channelName) {
 
     if (typeof initCallPage === "function") initCallPage(channelId);
     setTimeout(() => { if (typeof startCall === "function") startCall(channelId, videos); }, 100);
+
+    localStorage.setItem("lastChannel", JSON.stringify({ id: channelId, name: channelName, type: "voice", serverCode: document.querySelector(".server-item.active-server")?.dataset.serverInviteCode }));
 }
 
 function openTextChannel(channelId, channelName) {
+    lastOpenedChannelId = channelId;
+    lastOpenedChannelName = channelName;
+    lastOpenedChannelType = "text";
+
     const callPanel = document.getElementById("call-panel");
     if (callPanel && callPanel.classList.contains("call-active")) {
         callPanel.style.display = "none";
@@ -225,6 +241,7 @@ function openTextChannel(channelId, channelName) {
     document.getElementById("chat-placeholder").style.display = "none";
     document.getElementById("chat-panel").classList.add("active");
 
+    localStorage.setItem("lastChannel", JSON.stringify({ id: channelId, name: channelName, type: "text", serverCode: activeVoiceServerCode || document.querySelector(".server-item.active-server")?.dataset.serverInviteCode }));
     loadMessages(channelId);
 }
 
@@ -316,28 +333,34 @@ async function loadMessages(channelId) {
     }
 }
 
-                function appendMessage(msg) {
-                    const messagesDiv = document.getElementById("chat-messages");
-                    if (!messagesDiv) return;
+function appendMessage(msg) {
+    const messagesDiv = document.getElementById("chat-messages");
+    if (!messagesDiv) return;
 
-                    const emptyMsg = messagesDiv.querySelector(".chat-empty");
-                    if (emptyMsg) emptyMsg.remove();
+    const emptyMsg = messagesDiv.querySelector(".chat-empty");
+    if (emptyMsg) emptyMsg.remove();
 
-                    const isContinuation = String(msg.user_id) === String(lastMessageUserId);
-                    lastMessageUserId = msg.user_id;
+    const isContinuation = String(msg.user_id) === String(lastMessageUserId);
+    lastMessageUserId = msg.user_id;
 
-                    const div = document.createElement("div");
-                    div.className = "chat-message" + (isContinuation ? " continuation" : "");
+    const div = document.createElement("div");
+    div.className = "chat-message" + (isContinuation ? " continuation" : "");
 
-                    const time = new Date(msg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-                    const initial = (msg.username || "?").charAt(0).toUpperCase();
-                    const color = stringToColor(msg.username || "");
+    const time = new Date(msg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+    const initial = (msg.username || "?").charAt(0).toUpperCase();
+    const color = stringToColor(msg.username || "");
 
-                    const avatarHtml = msg.avatar_url
-                        ? `<img class="chat-avatar-img" src="${msg.avatar_url}" alt="">`
-                        : `<div class="chat-avatar" style="background:${color}">${initial}</div>`;
+    const avatarHtml = msg.avatar_url
+        ? `<img class="chat-avatar-img" src="${msg.avatar_url}" alt="">`
+        : `<div class="chat-avatar" style="background:${color}">${initial}</div>`;
 
-                    div.innerHTML = `
+    let emojiClass = "";
+    if (isEmojiOnlyMessage(msg.content)) {
+        const count = countEmojis(msg.content);
+        emojiClass = count <= 3 ? " emoji-only-big" : " emoji-only-medium";
+    }
+
+    div.innerHTML = `
         <div class="chat-avatar-slot">
             ${avatarHtml}
             <span class="chat-time-hover">${time}</span>
@@ -347,10 +370,10 @@ async function loadMessages(channelId) {
                 <span class="chat-username" style="color:${color}">${escapeHtml(msg.username)}</span>
                 <span class="chat-time">${time}</span>
             </div>
-            <div class="chat-text">${escapeHtml(msg.content)}</div>
+            <div class="chat-text${emojiClass}">${escapeHtml(msg.content)}</div>
         </div>
     `;
-                    messagesDiv.appendChild(div);
+    messagesDiv.appendChild(div);
 }
 
 async function sendMessage() {
@@ -359,6 +382,9 @@ async function sendMessage() {
     const content = input.value.trim();
     if (!content) return;
     input.value = "";
+
+    const emojiPicker = document.getElementById("emoji-picker");
+    if (emojiPicker) emojiPicker.classList.add("hidden");
 
     try {
         const res = await fetch(`${API}/messages`, {
@@ -422,12 +448,21 @@ function updateAuthUI() {
 }
 
 async function loadUserProfile() {
+    console.log("DEBUG: loadUserProfile appelée, currentUserId =", currentUserId);
     const userIcon = document.getElementById("user-icon");
 
-    // FIX : afficher la bulle immédiatement, peu importe l'état
     if (userIcon) userIcon.classList.add("ready");
 
-    if (!currentUserId) return;
+    if (!currentUserId) {
+        console.log("DEBUG: pas connecté, appel notifyAppReady");
+        if (window.electronAPI && window.electronAPI.notifyAppReady) {
+            console.log("DEBUG: electronAPI existe, on appelle notifyAppReady");
+            window.electronAPI.notifyAppReady();
+        } else {
+            console.log("DEBUG: electronAPI n'existe PAS !");
+        }
+        return;
+    }
 
     try {
         const res = await fetch(`${API}/users/${currentUserId}`);
@@ -444,8 +479,11 @@ async function loadUserProfile() {
         applyUserAvatar(data.avatar_url);
         currentAvatarDataUrl = data.avatar_url || null;
         currentAvatarOriginalUrl = data.avatar_original || data.avatar_url || null;
+
+        if (window.electronAPI && window.electronAPI.notifyAppReady) window.electronAPI.notifyAppReady();
     } catch (err) {
         console.log("Impossible de charger le profil");
+        if (window.electronAPI && window.electronAPI.notifyAppReady) window.electronAPI.notifyAppReady();
     }
 }
 
@@ -1382,6 +1420,18 @@ async function loadServerByCode(inviteCode) {
         const activeServer = document.querySelector(`.server-item[data-server-invite-code="${inviteCode}"]`);
         if (activeServer) activeServer.classList.add("active-server");
     }, 300); // délai pour laisser le temps à loadServers() de remplir la liste
+
+    // FIX : rouvrir le dernier salon consulté après un refresh
+    const saved = localStorage.getItem("lastChannel");
+    if (saved) {
+        const ch = JSON.parse(saved);
+        if (ch.serverCode === inviteCode) {
+            setTimeout(() => {
+                if (ch.type === "text") openTextChannel(ch.id, ch.name);
+                else openVoiceChannel(ch.id, ch.name);
+            }, 200);
+        }
+    }
 }
 
 // =============================================
@@ -1394,6 +1444,9 @@ function loadQuickAccess() {
 
     const saved = JSON.parse(localStorage.getItem("quickAccess") || "[]");
     list.innerHTML = "";
+
+    // FIX : ajoute/retire une classe selon si la liste est vide
+    list.classList.toggle("qa-empty", saved.length === 0);
 
     saved.forEach((item, index) => {
         const btn = document.createElement("button");
@@ -1535,14 +1588,6 @@ window.addEventListener("keydown", (e) => {
         e.preventDefault();
     }
 });
-
-// Charger au démarrage
-loadQuickAccess();
-
-router();
-updateAuthUI();
-loadUserProfile();
-if (currentUserId) loadServers();
 
 // =============================================
 // CONNEXION AVEC GOOGLE
@@ -2018,3 +2063,92 @@ document.addEventListener("click", (e) => {
         emojiPicker.classList.add("hidden");
     }
 });
+
+function isEmojiOnlyMessage(text) {
+    const trimmed = text.trim();
+    if (!trimmed) return false;
+    const emojiPattern = /^[\p{Extended_Pictographic}\u200d\ufe0f\u{1F3FB}-\u{1F3FF}\u{1F1E6}-\u{1F1FF}\s]+$/u;
+    return emojiPattern.test(trimmed);
+}
+
+function countEmojis(text) {
+    if (typeof Intl !== "undefined" && Intl.Segmenter) {
+        const segmenter = new Intl.Segmenter(undefined, { granularity: "grapheme" });
+        return [...segmenter.segment(text.trim())].length;
+    }
+    return [...text.trim()].length;
+}
+
+function formatMessageTime(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+
+    const isToday = date.toDateString() === now.toDateString();
+
+    const yesterday = new Date(now);
+    yesterday.setDate(now.getDate() - 1);
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+
+    const timeStr = date.toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
+
+    if (isToday) return timeStr;
+    if (isYesterday) return `Hier à ${timeStr}`;
+
+    const dateStr2 = date.toLocaleDateString("fr-FR", { day: "numeric", month: "short" });
+    return `${dateStr2} à ${timeStr}`;
+}
+
+// =============================================
+// BLOQUER LE CLIC DROIT PARTOUT SAUF SUR LES SERVEURS
+// =============================================
+
+document.addEventListener("contextmenu", (e) => {
+    const serverItem = e.target.closest(".server-item");
+    if (!serverItem) {
+        e.preventDefault();
+    }
+});
+
+// =============================================
+// PARTAGE D'ÉCRAN PERSONNALISÉ (Electron uniquement)
+// =============================================
+
+if (window.electronAPI && window.electronAPI.onOpenScreenPicker) {
+    window.electronAPI.onOpenScreenPicker(async () => {
+        const grid = document.getElementById("screen-sources-grid");
+        const popup = document.getElementById("screen-share-popup");
+        grid.innerHTML = `<p style="color:#888;grid-column:1/-1;text-align:center;">Chargement...</p>`;
+        popup.classList.remove("hidden");
+
+        const sources = await window.electronAPI.getScreenSources();
+        grid.innerHTML = "";
+
+        sources.forEach(source => {
+            const div = document.createElement("div");
+            div.className = "screen-source-item";
+            div.innerHTML = `
+                <img src="${source.thumbnail}" alt="">
+                <span>${source.name}</span>
+            `;
+            div.onclick = () => {
+                window.electronAPI.selectScreenSource(source.id);
+                popup.classList.add("hidden");
+            };
+            grid.appendChild(div);
+        });
+    });
+
+    const cancelScreenShare = document.getElementById("cancel-screen-share");
+    if (cancelScreenShare) cancelScreenShare.onclick = () => {
+        window.electronAPI.selectScreenSource(null);
+        document.getElementById("screen-share-popup").classList.add("hidden");
+    };
+}
+
+// Charger au démarrage
+loadQuickAccess();
+
+router();
+updateAuthUI();
+loadUserProfile();
+if (currentUserId) loadServers();
