@@ -32,7 +32,35 @@ function connectTextWs() {
                 scrollToBottom();
             }
         }
+        if (data.type === "voice_presence") {
+            renderVoicePresence(data.channel_id, data.users);
+        }
+        if (data.type === "voice_presence_full") {
+            Object.entries(data.presence).forEach(([chId, users]) => renderVoicePresence(chId, users));
+        }
     };
+
+    function renderVoicePresence(channelId, users) {
+        const container = document.getElementById(`voice-presence-${channelId}`);
+        if (!container) return;
+
+        if (!users || !users.length) {
+            container.innerHTML = "";
+            return;
+        }
+
+        container.innerHTML = users.map(u => {
+            const avatarHtml = u.avatar_url
+                ? `<img class="voice-presence-avatar" src="${u.avatar_url}" alt="">`
+                : `<div class="voice-presence-avatar voice-presence-initial" style="background:${stringToColor(u.username || "")}">${(u.username || "?").charAt(0).toUpperCase()}</div>`;
+            return `
+            <div class="voice-presence-user">
+                ${avatarHtml}
+                <span class="voice-presence-name">${escapeHtml(u.username || "")}</span>
+            </div>
+        `;
+        }).join("");
+    }
 
     textWs.onclose = () => {
         setTimeout(connectTextWs, 2000);
@@ -164,10 +192,21 @@ async function loadServer(serverId) {
                     div.innerHTML = `<span class="ch-icon">🔊</span>${ch.name}`;
                     div.onclick = () => openVoiceChannel(ch.id, ch.name);
                     voiceList.appendChild(div);
+
+                    const presenceDiv = document.createElement("div");
+                    presenceDiv.className = "voice-presence-list";
+                    presenceDiv.id = `voice-presence-${ch.id}`;
+                    voiceList.appendChild(presenceDiv);
+
                     setTimeout(() => div.classList.add("visible"), index * 50);
                 });
             }
         }
+
+        // Table userId -> avatar_url, utilisée par call.js pour les tuiles vidéo
+        window.memberAvatars = {};
+        (data.members || []).forEach(m => { window.memberAvatars[m.id] = m.avatar_url; });
+
     } catch (err) {
         console.error("Erreur loadServer:", err);
         if (textList) textList.innerHTML = `<div style="padding:8px 14px;font-size:0.8rem;color:#faa61a;">Reconnexion...</div>`;
@@ -2143,6 +2182,73 @@ if (window.electronAPI && window.electronAPI.onOpenScreenPicker) {
         window.electronAPI.selectScreenSource(null);
         document.getElementById("screen-share-popup").classList.add("hidden");
     };
+}
+
+// --- Créer un salon (texte ou vocal) depuis les boutons "+" de la sidebar ---
+const addTextChannelBtn = document.getElementById("add-text-channel-btn");
+const addVoiceChannelBtn = document.getElementById("add-voice-channel-btn");
+const createChannelPopup = document.getElementById("create-channel-popup");
+const createChannelNameInput = document.getElementById("create-channel-name");
+const createChannelError = document.getElementById("create-channel-error");
+const confirmCreateChannelBtn = document.getElementById("confirm-create-channel");
+const cancelCreateChannelBtn = document.getElementById("cancel-create-channel");
+let pendingChannelType = "text";
+
+function openCreateChannelPopup(type) {
+    pendingChannelType = type;
+    document.getElementById("create-channel-title").textContent =
+        type === "voice" ? "Créer un salon vocal" : "Créer un salon texte";
+    createChannelNameInput.value = "";
+    createChannelError.style.display = "none";
+    createChannelPopup.classList.remove("hidden");
+    setTimeout(() => createChannelNameInput.focus(), 50);
+}
+
+if (addTextChannelBtn) addTextChannelBtn.addEventListener("click", () => openCreateChannelPopup("text"));
+if (addVoiceChannelBtn) addVoiceChannelBtn.addEventListener("click", () => openCreateChannelPopup("voice"));
+
+if (cancelCreateChannelBtn) {
+    cancelCreateChannelBtn.addEventListener("click", () => createChannelPopup.classList.add("hidden"));
+}
+
+if (confirmCreateChannelBtn) {
+    confirmCreateChannelBtn.addEventListener("click", async () => {
+        const name = createChannelNameInput.value.trim();
+        if (!name) {
+            createChannelError.textContent = "Le nom du salon est requis.";
+            createChannelError.style.display = "block";
+            return;
+        }
+
+        try {
+            const res = await fetch(`${API}/servers/${currentServerId}/channels`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ name, type: pendingChannelType })
+            });
+            const data = await res.json();
+
+            if (!res.ok || !data.success) {
+                createChannelError.textContent = data.error || "Erreur lors de la création du salon.";
+                createChannelError.style.display = "block";
+                return;
+            }
+
+            createChannelPopup.classList.add("hidden");
+            loadServer(currentServerId);
+            showToast(`Salon "${name}" créé`);
+        } catch (err) {
+            console.error("Erreur création salon:", err);
+            createChannelError.textContent = "Erreur réseau, réessaie.";
+            createChannelError.style.display = "block";
+        }
+    });
+}
+
+if (createChannelNameInput) {
+    createChannelNameInput.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") confirmCreateChannelBtn.click();
+    });
 }
 
 // Charger au démarrage

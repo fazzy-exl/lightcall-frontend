@@ -1359,33 +1359,42 @@ h1 {
 
 #quick-access {
     border-top: 1px solid #2a2a2a;
-    padding: 10px 12px;
+    padding: 6px 12px;
     flex-shrink: 0;
 }
 
 #quick-access-header {
     display: flex;
     align-items: center;
-    justify-content: space-between;
+    justify-content: center;
+    position: relative;
     font-size: 0.75rem;
     font-weight: bold;
     color: #72767d;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    margin-bottom: 6px;
+    margin-bottom: 0;
+    min-height: 28px;
 }
 
 #quick-access-add {
-    width: 20px;
-    height: 20px;
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 28px;
+    height: 28px;
     padding: 0;
-    font-size: 16px;
+    font-size: 22px;
     background: transparent;
     color: #72767d;
     border: none;
     cursor: pointer;
-    line-height: 1;
-    border-radius: 4px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 0;
 }
 
 #quick-access-add:hover { color: white; background: #2a2d31; }
@@ -1398,6 +1407,10 @@ h1 {
 
 #quick-access-list.qa-empty {
     display: none !important;
+}
+
+#quick-access-list:not(.qa-empty) {
+    margin-top: 6px;
 }
 
 .quick-access-item {
@@ -1810,6 +1823,77 @@ body.has-dev-banner #main-content {
     display: block;
     font-size: 0.8rem;
     color: #dcddde;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+/* Rangée titre de section + bouton ajouter un salon */
+.ch-section-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-right: 12px;
+}
+
+.ch-add-btn {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    border: none;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    line-height: 1;
+    padding: 0;
+    color: #b5b8bd;
+    background: transparent;
+    transition: transform 0.15s ease, color 0.15s ease, background 0.15s ease;
+}
+
+.ch-add-btn:hover {
+    color: white;
+    background: linear-gradient(135deg, #ff4d8f, #ff7c2a);
+    transform: scale(1.15);
+}
+
+/* Liste des membres présents dans un salon vocal, sous son nom */
+.voice-presence-list {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    padding: 2px 0 4px 30px;
+}
+
+.voice-presence-user {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 2px 0;
+}
+
+.voice-presence-avatar {
+    width: 18px;
+    height: 18px;
+    border-radius: 50%;
+    object-fit: cover;
+    flex-shrink: 0;
+}
+
+.voice-presence-initial {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 10px;
+    font-weight: bold;
+    color: white;
+}
+
+.voice-presence-name {
+    font-size: 0.78rem;
+    color: #b5b8bd;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;

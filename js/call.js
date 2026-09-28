@@ -118,6 +118,14 @@ ws.onmessage = async (msg) => {
             if (container) container.classList.toggle("mic-off", !data.enabled);
             break;
 
+        case "cam": {
+            const camContainer = document.getElementById("video_container_" + data.id);
+            const camPlaceholder = document.getElementById("placeholder_" + data.id);
+            if (camContainer) camContainer.classList.toggle("cam-off", !data.enabled);
+            if (camPlaceholder) camPlaceholder.style.display = data.enabled ? "none" : "";
+            break;
+        }
+
         case "leave":
             // Nettoyer la vidéo du pair qui part
             const leaveContainer = document.getElementById("video_container_" + data.id);
@@ -209,15 +217,14 @@ function addVideoStream(stream, id, videosDiv) {
     if (!container) {
         container = document.createElement("div");
         container.id = container_id;
-        container.className = "video-container";
+        container.className = "video-container cam-off";
 
         const placeholder = document.createElement("div");
         placeholder.className = "placeholder";
         placeholder.id = "placeholder_" + id;
 
-        // FIX : utiliser l'avatar au lieu du texte
         const avatarImg = document.createElement("img");
-        avatarImg.src = "/images/Casque Transparent.JPEG";
+        avatarImg.src = (window.memberAvatars && window.memberAvatars[id]) || "/images/default-avatar.png";
         avatarImg.style.width = "100px";
         avatarImg.style.height = "100px";
         avatarImg.style.borderRadius = "50%";
@@ -288,7 +295,11 @@ async function toggleCamera() {
         localStream.getVideoTracks().forEach(t => t.stop());
         videoElement.srcObject = null;
         container.classList.add("cam-off");
+        const ph = document.getElementById("placeholder_" + userId);
+        if (ph) ph.style.display = "";
         cameraEnabled = false;
+
+        ws.send(JSON.stringify({ type: "cam", id: userId, enabled: false }));
 
     } else {
         camOnSound.play().catch(() => {});
@@ -325,10 +336,14 @@ async function toggleCamera() {
                 videoElement.play();
                 const sp = document.getElementById("cam-spinner-" + userId);
                 if (sp) sp.remove();
+                const ph = document.getElementById("placeholder_" + userId);
+                if (ph) ph.style.display = "none";
             };
 
             container.classList.remove("cam-off");
             cameraEnabled = true;
+
+            ws.send(JSON.stringify({ type: "cam", id: userId, enabled: true }));
 
         } catch (e) {
             const sp = document.getElementById("cam-spinner-" + userId);
