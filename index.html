@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LightCall</title>
-    <link rel="stylesheet" href="/css/style.css">
+    <link rel="stylesheet" href="css/style.css?v=1">
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/images/icon-192.png">
     <link rel="apple-touch-icon" href="/images/icon-180.png">
@@ -89,9 +89,17 @@
         <!-- Sidebar canaux -->
         <div id="server-channel-sidebar">
             <div id="server-sidebar-name">Serveur</div>
-            <div class="ch-section">Salons texte</div>
+
+            <div class="ch-section-row">
+                <span class="ch-section">Salons texte</span>
+                <button class="ch-add-btn" id="add-text-channel-btn" title="Ajouter un salon texte">+</button>
+            </div>
             <div id="text-channels"></div>
-            <div class="ch-section">Salons vocaux</div>
+
+            <div class="ch-section-row">
+                <span class="ch-section">Salons vocaux</span>
+                <button class="ch-add-btn" id="add-voice-channel-btn" title="Ajouter un salon vocal">+</button>
+            </div>
             <div id="voice-channel-list"></div>
 
         </div>
@@ -350,6 +358,18 @@
     </div>
 </div>
 
+<div id="create-channel-popup" class="popup hidden">
+    <div class="popup-content" style="width:340px;">
+        <h2 id="create-channel-title">Créer un salon</h2>
+        <input type="text" id="create-channel-name" placeholder="nom-du-salon" maxlength="40">
+        <p id="create-channel-error" class="s-error" style="display:none;color:#f04747;font-size:0.8rem;"></p>
+        <div class="popup-buttons">
+            <button id="confirm-create-channel" class="special-btn">Créer</button>
+            <button id="cancel-create-channel" class="special-btn cancel">Annuler</button>
+        </div>
+    </div>
+</div>
+
 <div id="delete-account-confirm" class="popup hidden">
     <div class="popup-content" style="width:340px;">
         <h2>⚠️ Supprimer ton compte</h2>
@@ -450,8 +470,8 @@
     </div>
 </div>
 
-<script src="/js/script.js"></script>
-<script src="/js/call.js"></script>
+<script src="/js/script.js?v=1"></script>
+<script src="/js/call.js?v=1"></script>
 <div id="toast"></div>
 </body>
 </html>
