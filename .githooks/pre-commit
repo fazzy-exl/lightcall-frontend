@@ -1,0 +1,27 @@
+#!/bin/sh
+# Auto cache-busting pour LightCall.
+# À chaque commit qui touche script.js, call.js ou style.css, on met à jour
+# leur ?v=... dans index.html avec un timestamp, pour forcer les navigateurs
+# à retélécharger la bonne version après un push (plus besoin de hard refresh).
+
+INDEX="index.html"
+
+if [ ! -f "$INDEX" ]; then
+    exit 0
+fi
+
+if git diff --cached --name-only | grep -qE "js/script\.js|js/call\.js|css/style\.css"; then
+    VERSION=$(date +%s)
+
+    sed -i.bak -E \
+        -e "s#(script\.js)(\?v=[0-9]+)?\"#\1?v=${VERSION}\"#" \
+        -e "s#(call\.js)(\?v=[0-9]+)?\"#\1?v=${VERSION}\"#" \
+        -e "s#(style\.css)(\?v=[0-9]+)?\"#\1?v=${VERSION}\"#" \
+        "$INDEX"
+
+    rm -f "${INDEX}.bak"
+    git add "$INDEX"
+    echo "Cache-busting : ?v=${VERSION} appliqué dans $INDEX"
+fi
+
+exit 0
