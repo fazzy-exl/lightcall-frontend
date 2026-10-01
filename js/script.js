@@ -343,12 +343,17 @@ function leaveCall() {
     if (!callPanel.classList.contains("active") && callPanel.style.display !== "none") return;
 
     if (typeof stopCall === "function") stopCall();
-
     localStorage.removeItem("lastChannel");
 
     callPanel.classList.remove("active");
     callPanel.style.display = "";
-    document.getElementById("chat-placeholder").style.display = "";
+
+    const chatPanel = document.getElementById("chat-panel");
+    const chatPlaceholder = document.getElementById("chat-placeholder");
+    if (chatPlaceholder && (!chatPanel || !chatPanel.classList.contains("active"))) {
+        chatPlaceholder.style.display = "";
+    }
+
     document.getElementById("mini-call-bar").classList.add("hidden");
     document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
 }
