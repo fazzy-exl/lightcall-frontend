@@ -2375,12 +2375,16 @@ if (bubbleLeaveBtn) {
 // --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
 // Remplace la version précédente de ce bloc dans script.js
 
+// --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
+// Remplace la version précédente de ce bloc dans script.js
+
 (function setupBubbleDrag() {
     const bubble = document.getElementById("call-video-bubble");
     if (!bubble) return;
 
     let dragging = false;
     let startX, startY, startLeft, startTop;
+    let bubbleWidth, bubbleHeight;
     let history = []; // historique récent {x, y, t} pour calculer la vélocité
 
     function getTopMargin() {
@@ -2447,6 +2451,9 @@ if (bubbleLeaveBtn) {
         history = [];
 
         const rect = bubble.getBoundingClientRect();
+        bubbleWidth = rect.width;
+        bubbleHeight = rect.height;
+
         bubble.style.left = rect.left + "px";
         bubble.style.top = rect.top + "px";
         bubble.style.right = "auto";
@@ -2462,8 +2469,15 @@ if (bubbleLeaveBtn) {
         if (!dragging) return;
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
-        bubble.style.left = (startLeft + dx) + "px";
-        bubble.style.top = (startTop + dy) + "px";
+
+        // FIX : on empêche la bulle de sortir de la fenêtre pendant le drag
+        const maxLeft = window.innerWidth - bubbleWidth;
+        const maxTop = window.innerHeight - bubbleHeight;
+        const newLeft = Math.min(Math.max(startLeft + dx, 0), maxLeft);
+        const newTop = Math.min(Math.max(startTop + dy, 0), maxTop);
+
+        bubble.style.left = newLeft + "px";
+        bubble.style.top = newTop + "px";
         recordHistory(e.clientX, e.clientY);
     });
 
