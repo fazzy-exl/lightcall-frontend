@@ -2295,19 +2295,34 @@ function getContainerUserId(container) {
     return container.id.replace("video_container_", "").replace("screen_container_", "");
 }
 
+let lastBubbleSourceId = null;
+
 function pickBubbleSource() {
+    // Garde la même source tant qu'elle reste valide, pour éviter que la bulle
+    // saute d'une caméra à l'autre à cause d'un petit bruit ponctuel
+    if (lastBubbleSourceId) {
+        const current = document.getElementById(lastBubbleSourceId);
+        if (current && current.classList.contains("video-container") && !current.classList.contains("cam-off")) {
+            const otherSpeaking = document.querySelector(".video-container.speaking:not(.cam-off)");
+            if (current.classList.contains("speaking") || !otherSpeaking || otherSpeaking === current) {
+                return current;
+            }
+        }
+    }
+
     // 1. Caméra de quelqu'un qui parle actuellement
     const speaking = document.querySelector(".video-container.speaking:not(.cam-off)");
-    if (speaking) return speaking;
+    if (speaking) { lastBubbleSourceId = speaking.id; return speaking; }
 
     // 2. N'importe quelle caméra ouverte (priorité aux caméras avant le partage)
     const anyCam = document.querySelector(".video-container:not(.cam-off):not(#bubble-video-container)");
-    if (anyCam) return anyCam;
+    if (anyCam) { lastBubbleSourceId = anyCam.id; return anyCam; }
 
     // 3. Un partage d'écran, seulement si aucune caméra n'est disponible
     const share = document.querySelector("[id^='screen_container_']");
-    if (share) return share;
+    if (share) { lastBubbleSourceId = share.id; return share; }
 
+    lastBubbleSourceId = null;
     return null;
 }
 
@@ -2346,12 +2361,19 @@ function updateCallBubble() {
     const isScreen = source.id.startsWith("screen_container_");
     const isLocal = userId === localStorage.getItem("userId");
 
+    // FIX : contour vert quand la personne affichée dans la bulle parle (jamais pour un partage d'écran)
+    const bubbleContainer = document.getElementById("bubble-video-container");
+    if (bubbleContainer) {
+        bubbleContainer.classList.toggle("speaking", !isScreen && source.classList.contains("speaking"));
+    }
+
     const name = (window.memberNames && window.memberNames[userId]) || "?";
     const nameLabel = document.getElementById("bubble-name");
     if (nameLabel) nameLabel.textContent = isScreen ? `🖥️ ${name}` : name;
 
     // FIX : ta propre caméra doit être muette (sinon tu t'entends) et inversée (miroir)
-    bubbleVideo.muted = isLocal;
+    // FIX : toujours muet — l'audio est déjà joué par la tuile vidéo d'origine, même en arrière-plan
+    bubbleVideo.muted = true;
     bubbleVideo.style.transform = (isLocal && !isScreen) ? "scaleX(-1)" : "none";
 
     const bubbleMuteBtn = document.getElementById("bubble-mute");

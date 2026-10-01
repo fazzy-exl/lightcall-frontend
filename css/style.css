@@ -1910,8 +1910,8 @@ body.has-dev-banner #main-content {
     z-index: 9000;
     background: #1a1a1a;
     border-radius: 12px;
-    overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0setupBubbleDrag, 0.5);
+    overflow: visible;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
     cursor: grab;
     touch-action: none;
 }
