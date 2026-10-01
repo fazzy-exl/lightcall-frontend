@@ -2352,6 +2352,7 @@ const bubbleLeaveBtn = document.getElementById("bubble-leave");
 
 if (bubbleExpandBtn) {
     bubbleExpandBtn.addEventListener("click", () => {
+        document.getElementById("call-video-bubble")?.classList.add("hidden");
         document.getElementById("mini-call-return")?.click();
     });
 }
