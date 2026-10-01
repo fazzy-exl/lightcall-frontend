@@ -263,6 +263,7 @@ function openTextChannel(channelId, channelName) {
         const miniName = document.getElementById("mini-call-name");
         if (miniBar) miniBar.classList.remove("hidden");
         if (miniName) miniName.textContent = document.getElementById("call-panel-name").textContent;
+        if (typeof updateCallBubble === "function") updateCallBubble();
     } else {
         leaveCall();
     }
@@ -1382,6 +1383,7 @@ async function loadServerByCode(inviteCode) {
         const miniName = document.getElementById("mini-call-name");
         if (miniBar) miniBar.classList.remove("hidden");
         if (miniName) miniName.textContent = document.getElementById("call-panel-name").textContent;
+        if (typeof updateCallBubble === "function") updateCallBubble();
     }
 
     const chatPanel = document.getElementById("chat-panel");
