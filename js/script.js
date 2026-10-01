@@ -225,12 +225,31 @@ function openVoiceChannel(channelId, channelName) {
     lastOpenedChannelType = "voice";
 
     activeVoiceServerCode = document.querySelector(`.server-item[data-server-id="${currentServerId}"]`)?.dataset.serverInviteCode || null;
-    if (document.getElementById("call-panel").classList.contains("call-active") &&
-        document.getElementById("call-panel-name").textContent === channelName) return;
+
+    const callPanel = document.getElementById("call-panel");
+
+    // FIX : si on clique sur le salon où on est déjà (même en arrière-plan), on revient dedans au lieu de rejoindre
+    if (callPanel.classList.contains("call-active") &&
+        document.getElementById("call-panel-name").textContent === channelName) {
+
+        document.getElementById("chat-placeholder").style.display = "none";
+        document.getElementById("chat-panel").classList.remove("active");
+        callPanel.style.display = "";
+
+        document.getElementById("mini-call-bar").classList.add("hidden");
+        const bubble = document.getElementById("call-video-bubble");
+        if (bubble) bubble.classList.add("hidden");
+
+        document.querySelectorAll(".ch-item").forEach(el => el.classList.remove("active", "active-voice"));
+        const activeItem = document.querySelector(`.ch-item[data-channel-id="${channelId}"]`);
+        if (activeItem) activeItem.classList.add("active-voice");
+
+        return;
+    }
 
     document.getElementById("chat-placeholder").style.display = "none";
     document.getElementById("chat-panel").classList.remove("active");
-    document.getElementById("call-panel").classList.add("active");
+    callPanel.classList.add("active");
     document.getElementById("call-panel-name").textContent = channelName;
 
     const videos = document.getElementById("videos");
@@ -242,7 +261,6 @@ function openVoiceChannel(channelId, channelName) {
     activeVoiceChannelId = channelId;
     activeVoiceServerId = currentServerId;
 
-    // FIX : cacher le mini-call-bar quand on est dans le call
     document.getElementById("mini-call-bar").classList.add("hidden");
 
     if (typeof initCallPage === "function") initCallPage(channelId);
