@@ -1399,6 +1399,15 @@ async function loadServerByCode(inviteCode) {
 
         currentServerId = data.id;
 
+        // Tables userId -> avatar_url / username, utilisées par call.js
+        // pour les tuiles vidéo et par la bulle d'appel flottante
+        window.memberAvatars = {};
+        window.memberNames = {};
+        (data.members || []).forEach(m => {
+            window.memberAvatars[m.id] = m.avatar_url;
+            window.memberNames[m.id] = m.username;
+        });
+
         // FIX : highlight du serveur actif
         document.querySelectorAll(".server-item").forEach(el => el.classList.remove("active-server"));
         const activeServer = document.querySelector(`.server-item[data-server-id="${data.id}"]`);
@@ -2250,6 +2259,102 @@ if (confirmCreateChannelBtn) {
 if (createChannelNameInput) {
     createChannelNameInput.addEventListener("keydown", (e) => {
         if (e.key === "Enter") confirmCreateChannelBtn.click();
+    });
+}
+
+// --- Bulle vidéo flottante (appel en arrière-plan) ---
+
+function getContainerUserId(container) {
+    if (!container) return null;
+    return container.id.replace("video_container_", "").replace("screen_container_", "");
+}
+
+function pickBubbleSource() {
+    // 1. Caméra de quelqu'un qui parle actuellement
+    const speaking = document.querySelector(".video-container.speaking:not(.cam-off)");
+    if (speaking) return speaking;
+
+    // 2. N'importe quelle caméra ouverte (priorité aux caméras avant le partage)
+    const anyCam = document.querySelector(".video-container:not(.cam-off):not(#bubble-video-container)");
+    if (anyCam) return anyCam;
+
+    // 3. Un partage d'écran, seulement si aucune caméra n'est disponible
+    const share = document.querySelector("[id^='screen_container_']");
+    if (share) return share;
+
+    return null;
+}
+
+function updateCallBubble() {
+    const bubble = document.getElementById("call-video-bubble");
+    const miniBar = document.getElementById("mini-call-bar");
+    const callPanel = document.getElementById("call-panel");
+    if (!bubble || !callPanel) return;
+
+    const inBackgroundCall = callPanel.classList.contains("call-active") && callPanel.style.display === "none";
+
+    if (!inBackgroundCall) {
+        bubble.classList.add("hidden");
+        return;
+    }
+
+    const source = pickBubbleSource();
+
+    if (!source) {
+        // Appel audio seulement : on garde le mini-call-bar texte, pas de bulle vidéo
+        bubble.classList.add("hidden");
+        if (miniBar) miniBar.classList.remove("hidden");
+        return;
+    }
+
+    // Une source vidéo existe : la bulle remplace le mini-call-bar texte
+    if (miniBar) miniBar.classList.add("hidden");
+
+    const sourceVideo = source.querySelector("video");
+    const bubbleVideo = document.getElementById("bubble-video");
+    if (sourceVideo && bubbleVideo && bubbleVideo.srcObject !== sourceVideo.srcObject) {
+        bubbleVideo.srcObject = sourceVideo.srcObject;
+    }
+
+    const userId = getContainerUserId(source);
+    const isScreen = source.id.startsWith("screen_container_");
+    const name = (window.memberNames && window.memberNames[userId]) || "?";
+    const nameLabel = document.getElementById("bubble-name");
+    if (nameLabel) nameLabel.textContent = isScreen ? `🖥️ ${name}` : name;
+
+    const bubbleMuteBtn = document.getElementById("bubble-mute");
+    if (bubbleMuteBtn && typeof micEnabled !== "undefined") {
+        bubbleMuteBtn.classList.toggle("muted", !micEnabled);
+    }
+
+    bubble.classList.remove("hidden");
+}
+
+let bubbleInterval = setInterval(updateCallBubble, 1000);
+updateCallBubble();
+
+// Boutons de la bulle
+const bubbleExpandBtn = document.getElementById("bubble-expand");
+const bubbleMuteBtn = document.getElementById("bubble-mute");
+const bubbleLeaveBtn = document.getElementById("bubble-leave");
+
+if (bubbleExpandBtn) {
+    bubbleExpandBtn.addEventListener("click", () => {
+        document.getElementById("mini-call-return")?.click();
+    });
+}
+
+if (bubbleMuteBtn) {
+    bubbleMuteBtn.addEventListener("click", () => {
+        if (typeof toggleMic === "function") toggleMic();
+        if (typeof micEnabled !== "undefined") bubbleMuteBtn.classList.toggle("muted", !micEnabled);
+    });
+}
+
+if (bubbleLeaveBtn) {
+    bubbleLeaveBtn.addEventListener("click", () => {
+        leaveCall();
+        document.getElementById("call-video-bubble")?.classList.add("hidden");
     });
 }
 

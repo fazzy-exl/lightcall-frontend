@@ -1898,3 +1898,77 @@ body.has-dev-banner #main-content {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+/* =====================================================
+   BULLE VIDÉO FLOTTANTE (appel en arrière-plan)
+===================================================== */
+#call-video-bubble {
+    position: fixed;
+    top: 16px;
+    right: 16px;
+    width: 220px;
+    z-index: 9000;
+    background: #1a1a1a;
+    border-radius: 12px;
+    overflow: hidden;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+}
+
+#call-video-bubble.hidden { display: none; }
+
+#call-video-bubble .video-container {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 0;
+    border: none;
+}
+
+#bubble-name {
+    position: absolute;
+    bottom: 8px;
+    left: 8px;
+    color: white;
+    font-size: 0.75rem;
+    font-weight: bold;
+    text-shadow: 0 1px 3px rgba(0, 0, 0, 0.8);
+    z-index: 5;
+    background: rgba(0, 0, 0, 0.45);
+    padding: 2px 8px;
+    border-radius: 6px;
+    max-width: calc(100% - 16px);
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+#bubble-controls {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    padding: 6px;
+    background: #141414;
+}
+
+#bubble-controls button {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    border: none;
+    background: #2a2d31;
+    color: white;
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+
+#bubble-controls button:hover {
+    background: linear-gradient(135deg, #ff4d8f, #ff7c2a);
+    transform: scale(1.1);
+}
+
+#bubble-mute.muted {
+    background: #d9534f;
+}
