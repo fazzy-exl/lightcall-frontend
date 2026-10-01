@@ -2323,9 +2323,15 @@ function updateCallBubble() {
 
     const userId = getContainerUserId(source);
     const isScreen = source.id.startsWith("screen_container_");
+    const isLocal = userId === localStorage.getItem("userId");
+
     const name = (window.memberNames && window.memberNames[userId]) || "?";
     const nameLabel = document.getElementById("bubble-name");
     if (nameLabel) nameLabel.textContent = isScreen ? `🖥️ ${name}` : name;
+
+    // FIX : ta propre caméra doit être muette (sinon tu t'entends) et inversée (miroir)
+    bubbleVideo.muted = isLocal;
+    bubbleVideo.style.transform = (isLocal && !isScreen) ? "scaleX(-1)" : "none";
 
     const bubbleMuteBtn = document.getElementById("bubble-mute");
     if (bubbleMuteBtn && typeof micEnabled !== "undefined") {
