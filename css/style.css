@@ -1983,3 +1983,69 @@ body.has-dev-banner #main-content {
 body.has-dev-banner #call-video-bubble {
     top: 48px;
 }
+
+#bubble-resize-handle {
+    position: absolute;
+    width: 16px;
+    height: 16px;
+    z-index: 10;
+}
+
+#bubble-resize-handle::after {
+    content: "";
+    position: absolute;
+    width: 8px;
+    height: 8px;
+}
+
+/* Bulle ancrée en haut-droite → poignée en bas-gauche */
+#call-video-bubble[data-corner="top-right"] #bubble-resize-handle {
+    left: 0;
+    bottom: 0;
+    cursor: nesw-resize;
+}
+#call-video-bubble[data-corner="top-right"] #bubble-resize-handle::after {
+    left: 3px;
+    bottom: 3px;
+    border-left: 2px solid rgba(255, 255, 255, 0.6);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Bulle ancrée en haut-gauche → poignée en bas-droite */
+#call-video-bubble[data-corner="top-left"] #bubble-resize-handle {
+    right: 0;
+    bottom: 0;
+    cursor: nwse-resize;
+}
+#call-video-bubble[data-corner="top-left"] #bubble-resize-handle::after {
+    right: 3px;
+    bottom: 3px;
+    border-right: 2px solid rgba(255, 255, 255, 0.6);
+    border-bottom: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Bulle ancrée en bas-droite → poignée en haut-gauche */
+#call-video-bubble[data-corner="bottom-right"] #bubble-resize-handle {
+    left: 0;
+    top: 0;
+    cursor: nwse-resize;
+}
+#call-video-bubble[data-corner="bottom-right"] #bubble-resize-handle::after {
+    left: 3px;
+    top: 3px;
+    border-left: 2px solid rgba(255, 255, 255, 0.6);
+    border-top: 2px solid rgba(255, 255, 255, 0.6);
+}
+
+/* Bulle ancrée en bas-gauche → poignée en haut-droite */
+#call-video-bubble[data-corner="bottom-left"] #bubble-resize-handle {
+    right: 0;
+    top: 0;
+    cursor: nesw-resize;
+}
+#call-video-bubble[data-corner="bottom-left"] #bubble-resize-handle::after {
+    right: 3px;
+    top: 3px;
+    border-right: 2px solid rgba(255, 255, 255, 0.6);
+    border-top: 2px solid rgba(255, 255, 255, 0.6);
+}

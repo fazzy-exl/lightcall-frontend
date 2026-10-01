@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>LightCall</title>
-    <link rel="stylesheet" href="/css/style.css?v=1790834232">
+    <link rel="stylesheet" href="/css/style.css?v=1790835980">
     <link rel="manifest" href="/manifest.json">
     <link rel="icon" href="/images/icon-192.png">
     <link rel="apple-touch-icon" href="/images/icon-180.png">
@@ -472,20 +472,21 @@
 
 <!-- BULLE VIDÉO FLOTTANTE (appel en arrière-plan) -->
 <!-- À ajouter juste avant <div id="toast"></div>, en bas du body -->
-<div id="call-video-bubble" class="hidden">
+<div id="call-video-bubble" class="hidden" data-corner="top-right">
     <div class="video-container" id="bubble-video-container">
         <video id="bubble-video" class="call-video" autoplay playsinline></video>
         <div id="bubble-name"></div>
     </div>
     <div id="bubble-controls">
-        <button id="bubble-expand" title="Agrandir">⛶</button>
+        <button id="bubble-expand" title="Agrandir l'appel">⛶</button>
         <button id="bubble-mute" title="Micro">🎤</button>
         <button id="bubble-leave" title="Quitter l'appel">📞</button>
     </div>
+    <div id="bubble-resize-handle" title="Redimensionner"></div>
 </div>
 
-<script src="/js/script.js?v=1790834232"></script>
-<script src="/js/call.js?v=1790834232"></script>
+<script src="/js/script.js?v=1790835980"></script>
+<script src="/js/call.js?v=1790835980"></script>
 <div id="toast"></div>
 </body>
 </html>

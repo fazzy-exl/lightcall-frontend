@@ -2370,15 +2370,6 @@ if (bubbleLeaveBtn) {
     });
 }
 
-// --- Drag & snap de la bulle d'appel vers le coin le plus proche ---
-// À ajouter dans script.js, après le code existant de la bulle (bubble.js)
-
-// --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
-// Remplace la version précédente de ce bloc dans script.js
-
-// --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
-// Remplace la version précédente de ce bloc dans script.js
-
 // --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
 // Remplace la version précédente de ce bloc dans script.js
 
@@ -2389,54 +2380,51 @@ if (bubbleLeaveBtn) {
     let dragging = false;
     let startX, startY, startLeft, startTop;
     let bubbleWidth, bubbleHeight;
-    let history = []; // historique récent {x, y, t} pour calculer la vélocité
+    let gestureStartTime = 0;
+    let gestureStartX = 0;
+    let gestureStartY = 0;
 
     function getTopMargin() {
         return document.body.classList.contains("has-dev-banner") ? 48 : 16;
     }
 
-    function recordHistory(x, y) {
-        const now = performance.now();
-        history.push({ x, y, t: now });
-        // on garde seulement les ~120 dernières millisecondes
-        while (history.length > 1 && now - history[0].t > 120) history.shift();
-    }
-
-    function getVelocity() {
-        if (history.length < 2) return { vx: 0, vy: 0 };
-        const first = history[0];
-        const last = history[history.length - 1];
-        const dt = last.t - first.t;
+    // Vitesse moyenne sur TOUT le geste (du clic jusqu'à maintenant), pas juste la fin.
+    // Plus robuste qu'une fenêtre récente : capte un vrai swing même si la main ralentit
+    // juste avant de lâcher, et dilue les petits mouvements parasites de fin de geste.
+    function getGestureVelocity(endX, endY) {
+        const dt = performance.now() - gestureStartTime;
         if (dt <= 0) return { vx: 0, vy: 0 };
         return {
-            vx: (last.x - first.x) / dt, // px/ms
-            vy: (last.y - first.y) / dt
+            vx: (endX - gestureStartX) / dt, // px/ms
+            vy: (endY - gestureStartY) / dt
         };
     }
 
-    function snapToCorner() {
+    function snapToCorner(endX, endY) {
         const rect = bubble.getBoundingClientRect();
-        const { vx, vy } = getVelocity();
+        const { vx, vy } = getGestureVelocity(endX, endY);
         const speed = Math.hypot(vx, vy);
 
-        let goRight, goBottom;
-        const FLICK_THRESHOLD = 0.4; // px/ms (~400px/s) — en dessous, on traite ça comme un simple dépôt
+        // Par défaut : position où la bulle a été lâchée
+        const centerX = rect.left + rect.width / 2;
+        const centerY = rect.top + rect.height / 2;
+        let goRight = centerX > window.innerWidth / 2;
+        let goBottom = centerY > window.innerHeight / 2;
+
+        const FLICK_THRESHOLD = 0.5; // px/ms — vitesse moyenne pour considérer qu'il y a eu un "swing"
+        const AXIS_THRESHOLD = 0.3;  // px/ms — vitesse minimale SUR UN AXE pour que cet axe suive le mouvement
 
         if (speed > FLICK_THRESHOLD) {
-            // Swing détecté : on suit la direction du mouvement, pas la position finale
-            goRight = vx > 0;
-            goBottom = vy > 0;
-        } else {
-            // Dépôt lent : on se base sur la position où la bulle a été lâchée
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            goRight = centerX > window.innerWidth / 2;
-            goBottom = centerY > window.innerHeight / 2;
+            if (Math.abs(vx) > AXIS_THRESHOLD) goRight = vx > 0;
+            if (Math.abs(vy) > AXIS_THRESHOLD) goBottom = vy > 0;
         }
 
         const margin = 16;
         const targetLeft = goRight ? (window.innerWidth - rect.width - margin) : margin;
         const targetTop = goBottom ? (window.innerHeight - rect.height - margin) : getTopMargin();
+
+        // FIX : retenir dans quel coin la bulle est ancrée (utilisé par la poignée de redimensionnement)
+        bubble.dataset.corner = (goBottom ? "bottom" : "top") + "-" + (goRight ? "right" : "left");
 
         bubble.style.transition = "left 0.25s ease, top 0.25s ease";
         bubble.style.left = targetLeft + "px";
@@ -2445,6 +2433,9 @@ if (bubbleLeaveBtn) {
         setTimeout(() => { bubble.style.transition = ""; }, 260);
     }
 
+    // Coin par défaut au chargement (avant le premier drag), doit correspondre à la position CSS initiale
+    if (!bubble.dataset.corner) bubble.dataset.corner = "top-right";
+
     bubble.addEventListener("pointerdown", (e) => {
         if (e.target.closest("button")) return;
 
@@ -2452,7 +2443,6 @@ if (bubbleLeaveBtn) {
         bubble.setPointerCapture(e.pointerId);
         bubble.style.transition = "none";
         bubble.classList.add("dragging");
-        history = [];
 
         const rect = bubble.getBoundingClientRect();
         bubbleWidth = rect.width;
@@ -2466,7 +2456,10 @@ if (bubbleLeaveBtn) {
         startY = e.clientY;
         startLeft = rect.left;
         startTop = rect.top;
-        recordHistory(e.clientX, e.clientY);
+
+        gestureStartTime = performance.now();
+        gestureStartX = e.clientX;
+        gestureStartY = e.clientY;
     });
 
     bubble.addEventListener("pointermove", (e) => {
@@ -2474,7 +2467,7 @@ if (bubbleLeaveBtn) {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
 
-        // FIX : on empêche la bulle de sortir de la fenêtre (et de passer sous la bannière de dev) pendant le drag
+        // On empêche la bulle de sortir de la fenêtre (et de passer sous la bannière de dev) pendant le drag
         const maxLeft = window.innerWidth - bubbleWidth;
         const maxTop = window.innerHeight - bubbleHeight;
         const minTop = getTopMargin();
@@ -2483,7 +2476,6 @@ if (bubbleLeaveBtn) {
 
         bubble.style.left = newLeft + "px";
         bubble.style.top = newTop + "px";
-        recordHistory(e.clientX, e.clientY);
     });
 
     bubble.addEventListener("pointerup", (e) => {
@@ -2491,8 +2483,106 @@ if (bubbleLeaveBtn) {
         dragging = false;
         bubble.classList.remove("dragging");
         bubble.releasePointerCapture(e.pointerId);
-        recordHistory(e.clientX, e.clientY);
-        snapToCorner();
+        snapToCorner(e.clientX, e.clientY);
+    });
+})();
+
+// --- Redimensionnement de la bulle d'appel (poignée à l'opposé du coin ancré) ---
+(function setupBubbleResize() {
+    const bubble = document.getElementById("call-video-bubble");
+    const handle = document.getElementById("bubble-resize-handle");
+    if (!bubble || !handle) return;
+
+    const MIN_WIDTH = 160;
+    const MAX_WIDTH = 420;
+
+    let resizing = false;
+    let startX;
+    let startWidth, startHeight, startLeft, startTop;
+    let controlsHeight = 0;
+
+    function getTopMargin() {
+        return document.body.classList.contains("has-dev-banner") ? 48 : 16;
+    }
+
+    handle.addEventListener("pointerdown", (e) => {
+        e.stopPropagation(); // ne pas déclencher le déplacement de la bulle en même temps
+        resizing = true;
+        handle.setPointerCapture(e.pointerId);
+        bubble.style.transition = "none";
+
+        const rect = bubble.getBoundingClientRect();
+        startWidth = rect.width;
+        startHeight = rect.height;
+        startLeft = rect.left;
+        startTop = rect.top;
+
+        // Hauteur fixe des contrôles = hauteur totale - hauteur vidéo (ratio 16:9 basé sur la largeur)
+        const videoHeight = startWidth * 9 / 16;
+        controlsHeight = startHeight - videoHeight;
+
+        startX = e.clientX;
+    });
+
+    handle.addEventListener("pointermove", (e) => {
+        if (!resizing) return;
+
+        const corner = bubble.dataset.corner || "top-right";
+        const anchorRight = corner.endsWith("right");    // coin ancré à droite → poignée à gauche → drag horizontal inversé
+        const anchorBottom = corner.startsWith("bottom"); // coin ancré en bas → poignée en haut
+
+        const dx = e.clientX - startX;
+        // Si le coin ancré est à droite, la poignée est à gauche : la tirer vers la gauche (dx < 0) agrandit.
+        // Si le coin ancré est à gauche, la poignée est à droite : la tirer vers la droite (dx > 0) agrandit.
+        let newWidth = anchorRight ? (startWidth - dx) : (startWidth + dx);
+
+        newWidth = Math.min(Math.max(newWidth, MIN_WIDTH), MAX_WIDTH);
+
+        // Ne pas dépasser les limites de la fenêtre côté horizontal, selon le coin ancré
+        if (anchorRight) {
+            const anchorRightX = startLeft + startWidth; // bord droit fixe
+            newWidth = Math.min(newWidth, anchorRightX); // left = anchorRightX - newWidth doit rester >= 0
+        } else {
+            const maxWidthByRight = window.innerWidth - startLeft - 8; // right = left + newWidth doit rester dans la fenêtre
+            newWidth = Math.min(newWidth, maxWidthByRight);
+        }
+
+        let newHeight = newWidth * 9 / 16 + controlsHeight;
+
+        // Ne pas dépasser les limites de la fenêtre côté vertical, selon le coin ancré
+        const topMargin = getTopMargin();
+        if (anchorBottom) {
+            const anchorBottomY = startTop + startHeight; // bord bas fixe
+            const maxHeightByTop = anchorBottomY - topMargin; // top = anchorBottomY - newHeight doit rester >= topMargin
+            if (newHeight > maxHeightByTop) {
+                newHeight = maxHeightByTop;
+                newWidth = Math.min(newWidth, (newHeight - controlsHeight) * 16 / 9);
+                newHeight = newWidth * 9 / 16 + controlsHeight;
+            }
+        } else {
+            const maxHeightByBottom = window.innerHeight - startTop - 8;
+            if (newHeight > maxHeightByBottom) {
+                newHeight = maxHeightByBottom;
+                newWidth = Math.min(newWidth, (newHeight - controlsHeight) * 16 / 9);
+                newHeight = newWidth * 9 / 16 + controlsHeight;
+            }
+        }
+
+        // Position : garder le coin ancré fixe, faire bouger seulement le bord opposé (où est la poignée)
+        const newLeft = anchorRight ? (startLeft + startWidth - newWidth) : startLeft;
+        const newTop = anchorBottom ? (startTop + startHeight - newHeight) : startTop;
+
+        bubble.style.width = newWidth + "px";
+        bubble.style.left = newLeft + "px";
+        bubble.style.top = newTop + "px";
+        bubble.style.right = "auto";
+    });
+
+    handle.addEventListener("pointerup", (e) => {
+        if (!resizing) return;
+        resizing = false;
+        handle.releasePointerCapture(e.pointerId);
+        bubble.style.transition = "";
     });
 })();
 
