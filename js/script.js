@@ -2369,6 +2369,114 @@ if (bubbleLeaveBtn) {
     });
 }
 
+// --- Drag & snap de la bulle d'appel vers le coin le plus proche ---
+// À ajouter dans script.js, après le code existant de la bulle (bubble.js)
+
+// --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
+// Remplace la version précédente de ce bloc dans script.js
+
+(function setupBubbleDrag() {
+    const bubble = document.getElementById("call-video-bubble");
+    if (!bubble) return;
+
+    let dragging = false;
+    let startX, startY, startLeft, startTop;
+    let history = []; // historique récent {x, y, t} pour calculer la vélocité
+
+    function getTopMargin() {
+        return document.body.classList.contains("has-dev-banner") ? 48 : 16;
+    }
+
+    function recordHistory(x, y) {
+        const now = performance.now();
+        history.push({ x, y, t: now });
+        // on garde seulement les ~120 dernières millisecondes
+        while (history.length > 1 && now - history[0].t > 120) history.shift();
+    }
+
+    function getVelocity() {
+        if (history.length < 2) return { vx: 0, vy: 0 };
+        const first = history[0];
+        const last = history[history.length - 1];
+        const dt = last.t - first.t;
+        if (dt <= 0) return { vx: 0, vy: 0 };
+        return {
+            vx: (last.x - first.x) / dt, // px/ms
+            vy: (last.y - first.y) / dt
+        };
+    }
+
+    function snapToCorner() {
+        const rect = bubble.getBoundingClientRect();
+        const { vx, vy } = getVelocity();
+        const speed = Math.hypot(vx, vy);
+
+        let goRight, goBottom;
+        const FLICK_THRESHOLD = 0.4; // px/ms (~400px/s) — en dessous, on traite ça comme un simple dépôt
+
+        if (speed > FLICK_THRESHOLD) {
+            // Swing détecté : on suit la direction du mouvement, pas la position finale
+            goRight = vx > 0;
+            goBottom = vy > 0;
+        } else {
+            // Dépôt lent : on se base sur la position où la bulle a été lâchée
+            const centerX = rect.left + rect.width / 2;
+            const centerY = rect.top + rect.height / 2;
+            goRight = centerX > window.innerWidth / 2;
+            goBottom = centerY > window.innerHeight / 2;
+        }
+
+        const margin = 16;
+        const targetLeft = goRight ? (window.innerWidth - rect.width - margin) : margin;
+        const targetTop = goBottom ? (window.innerHeight - rect.height - margin) : getTopMargin();
+
+        bubble.style.transition = "left 0.25s ease, top 0.25s ease";
+        bubble.style.left = targetLeft + "px";
+        bubble.style.top = targetTop + "px";
+
+        setTimeout(() => { bubble.style.transition = ""; }, 260);
+    }
+
+    bubble.addEventListener("pointerdown", (e) => {
+        if (e.target.closest("button")) return;
+
+        dragging = true;
+        bubble.setPointerCapture(e.pointerId);
+        bubble.style.transition = "none";
+        bubble.classList.add("dragging");
+        history = [];
+
+        const rect = bubble.getBoundingClientRect();
+        bubble.style.left = rect.left + "px";
+        bubble.style.top = rect.top + "px";
+        bubble.style.right = "auto";
+
+        startX = e.clientX;
+        startY = e.clientY;
+        startLeft = rect.left;
+        startTop = rect.top;
+        recordHistory(e.clientX, e.clientY);
+    });
+
+    bubble.addEventListener("pointermove", (e) => {
+        if (!dragging) return;
+        const dx = e.clientX - startX;
+        const dy = e.clientY - startY;
+        bubble.style.left = (startLeft + dx) + "px";
+        bubble.style.top = (startTop + dy) + "px";
+        recordHistory(e.clientX, e.clientY);
+    });
+
+    bubble.addEventListener("pointerup", (e) => {
+        if (!dragging) return;
+        dragging = false;
+        bubble.classList.remove("dragging");
+        bubble.releasePointerCapture(e.pointerId);
+        recordHistory(e.clientX, e.clientY);
+        snapToCorner();
+    });
+})();
+
 // Charger au démarrage
 loadQuickAccess();
 
