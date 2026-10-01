@@ -1911,7 +1911,13 @@ body.has-dev-banner #main-content {
     background: #1a1a1a;
     border-radius: 12px;
     overflow: hidden;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    box-shadow: 0 8px 24px rgba(0, 0, 0setupBubbleDrag, 0.5);
+    cursor: grab;
+    touch-action: none;
+}
+
+#call-video-bubble.dragging {
+    cursor: grabbing;
 }
 
 #call-video-bubble.hidden { display: none; }
@@ -1971,4 +1977,9 @@ body.has-dev-banner #main-content {
 
 #bubble-mute.muted {
     background: #d9534f;
+}
+
+/* Pousse la bulle d'appel sous la bannière de développement quand elle est présente */
+body.has-dev-banner #call-video-bubble {
+    top: 48px;
 }

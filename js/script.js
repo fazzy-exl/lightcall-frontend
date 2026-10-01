@@ -2047,6 +2047,7 @@ const devBannerClose = document.getElementById("dev-banner-close");
 if (devBannerClose) devBannerClose.addEventListener("click", () => {
     document.getElementById("dev-banner").classList.add("hidden");
     document.body.classList.remove("has-dev-banner");
+    if (typeof window.adjustBubbleTopForBanner === "function") window.adjustBubbleTopForBanner();
 });
 
 // =============================================
@@ -2378,6 +2379,9 @@ if (bubbleLeaveBtn) {
 // --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
 // Remplace la version précédente de ce bloc dans script.js
 
+// --- Drag & snap de la bulle d'appel vers le coin le plus proche (avec effet "swing") ---
+// Remplace la version précédente de ce bloc dans script.js
+
 (function setupBubbleDrag() {
     const bubble = document.getElementById("call-video-bubble");
     if (!bubble) return;
@@ -2470,11 +2474,12 @@ if (bubbleLeaveBtn) {
         const dx = e.clientX - startX;
         const dy = e.clientY - startY;
 
-        // FIX : on empêche la bulle de sortir de la fenêtre pendant le drag
+        // FIX : on empêche la bulle de sortir de la fenêtre (et de passer sous la bannière de dev) pendant le drag
         const maxLeft = window.innerWidth - bubbleWidth;
         const maxTop = window.innerHeight - bubbleHeight;
+        const minTop = getTopMargin();
         const newLeft = Math.min(Math.max(startLeft + dx, 0), maxLeft);
-        const newTop = Math.min(Math.max(startTop + dy, 0), maxTop);
+        const newTop = Math.min(Math.max(startTop + dy, minTop), maxTop);
 
         bubble.style.left = newLeft + "px";
         bubble.style.top = newTop + "px";
@@ -2490,6 +2495,27 @@ if (bubbleLeaveBtn) {
         snapToCorner();
     });
 })();
+
+// --- Ajuste la bulle d'appel si elle est en haut quand la bannière de dev se ferme ---
+// À ajouter dans script.js, après le bloc setupBubbleDrag
+
+function adjustBubbleTopForBanner() {
+    const bubble = document.getElementById("call-video-bubble");
+    if (!bubble || !bubble.style.top) return; // jamais déplacée : la CSS gère déjà ça automatiquement
+
+    const currentTop = parseFloat(bubble.style.top);
+    const topWithBanner = 48;
+    const topWithoutBanner = 16;
+
+    // Si la bulle est collée en haut (avec la marge "bannière présente"), on l'ajuste vers le haut
+    if (Math.abs(currentTop - topWithBanner) < 2) {
+        bubble.style.transition = "top 0.25s ease";
+        bubble.style.top = topWithoutBanner + "px";
+        setTimeout(() => { bubble.style.transition = ""; }, 260);
+    }
+}
+
+window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
 
 // Charger au démarrage
 loadQuickAccess();
