@@ -344,6 +344,8 @@ function leaveCall() {
 
     if (typeof stopCall === "function") stopCall();
 
+    localStorage.removeItem("lastChannel");
+
     callPanel.classList.remove("active");
     callPanel.style.display = "";
     document.getElementById("chat-placeholder").style.display = "";
