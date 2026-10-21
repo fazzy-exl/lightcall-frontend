@@ -411,6 +411,8 @@ async function loadMessages(channelId) {
     }
 }
 
+const GROUP_WINDOW_MS = 7 * 60 * 1000; // messages d'une même personne regroupés dans cette fenêtre
+
 function appendMessage(msg) {
     const messagesDiv = document.getElementById("chat-messages");
     if (!messagesDiv) return;
@@ -418,19 +420,8 @@ function appendMessage(msg) {
     const emptyMsg = messagesDiv.querySelector(".chat-empty");
     if (emptyMsg) emptyMsg.remove();
 
-    const isContinuation = String(msg.user_id) === String(lastMessageUserId);
-    lastMessageUserId = msg.user_id;
-
-    const div = document.createElement("div");
-    div.className = "chat-message" + (isContinuation ? " continuation" : "");
-
+    const msgTime = new Date(msg.created_at).getTime();
     const time = new Date(msg.created_at).toLocaleTimeString("fr-FR", { hour: "2-digit", minute: "2-digit" });
-    const initial = (msg.username || "?").charAt(0).toUpperCase();
-    const color = stringToColor(msg.username || "");
-
-    const avatarHtml = msg.avatar_url
-        ? `<img class="chat-avatar-img" src="${msg.avatar_url}" alt="">`
-        : `<div class="chat-avatar" style="background:${color}">${initial}</div>`;
 
     let emojiClass = "";
     if (isEmojiOnlyMessage(msg.content)) {
@@ -438,17 +429,50 @@ function appendMessage(msg) {
         emojiClass = count <= 3 ? " emoji-only-big" : " emoji-only-medium";
     }
 
-    div.innerHTML = `
-        <div class="chat-avatar-slot">
-            ${avatarHtml}
+    lastMessageUserId = msg.user_id;
+
+    // Même personne, dans la fenêtre de temps : on ajoute une ligne au bloc existant
+    const last = messagesDiv.lastElementChild;
+    const canGroup = last
+        && last.classList.contains("chat-message")
+        && last.dataset.userId === String(msg.user_id)
+        && Math.abs(msgTime - Number(last.dataset.lastTime)) < GROUP_WINDOW_MS;
+
+    if (canGroup) {
+        const line = document.createElement("div");
+        line.className = "chat-line";
+        line.innerHTML = `
             <span class="chat-time-hover">${time}</span>
-        </div>
+            <div class="chat-text${emojiClass}">${escapeHtml(msg.content)}</div>
+        `;
+        last.querySelector(".chat-bubble").appendChild(line);
+        last.dataset.lastTime = msgTime;
+        return;
+    }
+
+    // Sinon : nouveau bloc avec avatar + nom + heure
+    const initial = (msg.username || "?").charAt(0).toUpperCase();
+    const color = stringToColor(msg.username || "");
+
+    const avatarHtml = msg.avatar_url
+        ? `<img class="chat-avatar-img" src="${msg.avatar_url}" alt="">`
+        : `<div class="chat-avatar" style="background:${color}">${initial}</div>`;
+
+    const div = document.createElement("div");
+    div.className = "chat-message";
+    div.dataset.userId = String(msg.user_id);
+    div.dataset.lastTime = msgTime;
+
+    div.innerHTML = `
+        <div class="chat-avatar-slot">${avatarHtml}</div>
         <div class="chat-bubble">
             <div class="chat-meta">
                 <span class="chat-username" style="color:${color}">${escapeHtml(msg.username)}</span>
                 <span class="chat-time">${time}</span>
             </div>
-            <div class="chat-text${emojiClass}">${escapeHtml(msg.content)}</div>
+            <div class="chat-line">
+                <div class="chat-text${emojiClass}">${escapeHtml(msg.content)}</div>
+            </div>
         </div>
     `;
     messagesDiv.appendChild(div);
