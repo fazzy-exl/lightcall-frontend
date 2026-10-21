@@ -1929,6 +1929,10 @@ body.has-dev-banner #main-content {
     border: none;
 }
 
+#call-video-bubble .call-video {
+    border-radius: 0;
+}
+
 #bubble-name {
     position: absolute;
     bottom: 8px;
