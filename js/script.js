@@ -1403,10 +1403,7 @@ function toSlug(name) {
 
 async function loadServerByCode(inviteCode) {
     showPage("page-server-view");
-    async function loadServerByCode(inviteCode) {
-        showPage("page-server-view");
-        currentServerCode = inviteCode;
-        currentChannelId = null;
+    currentServerCode = inviteCode;
     currentChannelId = null;
     lastMessageUserId = null;
 
@@ -1513,33 +1510,27 @@ async function loadServerByCode(inviteCode) {
         if (activeServer) activeServer.classList.add("active-server");
     }, 300); // délai pour laisser le temps à loadServers() de remplir la liste
 
-    // FIX : rouvrir le dernier salon consulté après un refresh
+    // Après un refresh : te remet dans l'appel vocal seulement si tu y étais
     const saved = localStorage.getItem("lastChannel");
-    let restored = false;
     if (saved) {
         const ch = JSON.parse(saved);
-        if (ch.serverCode === inviteCode) {
-            restored = true;
-            setTimeout(() => {
-                if (ch.type === "text") openTextChannel(ch.id, ch.name);
-                else openVoiceChannel(ch.id, ch.name);
-            }, 200);
+        if (ch.type === "voice" && ch.serverCode === inviteCode) {
+            setTimeout(() => openVoiceChannel(ch.id, ch.name), 200);
+            return;
         }
     }
 
-    // FIX : sinon, rouvrir le dernier salon textuel de CE serveur
-        if (!restored) {
-            const last = getLastTextChannels()[inviteCode];
-            if (last) {
-                setTimeout(() => {
-                    if (currentServerCode !== inviteCode) return; // tu as déjà changé de serveur entre-temps
-                    if (document.querySelector(`#text-channels .ch-item[data-channel-id="${last.id}"]`)) {
-                        openTextChannel(last.id, last.name);
-                    }
-                }, 200);
+    // Sinon : rouvre le dernier salon textuel de CE serveur
+    const last = getLastTextChannels()[inviteCode];
+    if (last) {
+        setTimeout(() => {
+            if (currentServerCode !== inviteCode) return; // tu as déjà changé de serveur entre-temps
+            if (document.querySelector(`#text-channels .ch-item[data-channel-id="${last.id}"]`)) {
+                openTextChannel(last.id, last.name);
             }
-        }
+        }, 200);
     }
+}
 
 // =============================================
 // ACCÈS RAPIDE
