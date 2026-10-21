@@ -13,6 +13,19 @@ let activeVoiceServerCode = null;
 let lastOpenedChannelId = null;
 let lastOpenedChannelName = null;
 let lastOpenedChannelType = null; // "text" ou "voice"
+let currentServerCode = null;
+
+function getLastTextChannels() {
+    try { return JSON.parse(localStorage.getItem("lastTextChannels")) || {}; }
+    catch { return {}; }
+}
+
+function saveLastTextChannel(serverCode, id, name) {
+    if (!serverCode) return;
+    const all = getLastTextChannels();
+    all[serverCode] = { id, name };
+    localStorage.setItem("lastTextChannels", JSON.stringify(all));
+}
 
 const savedId = localStorage.getItem("userId");
 if (savedId) currentUserId = savedId;
@@ -102,6 +115,7 @@ function router() {
     const serverMatch = path.match(/^\/server\/([a-zA-Z0-9_-]+)(?:\/[^/]*)?\/?\s*$/);
     if (serverMatch) {
         showPage("page-server-view");
+        currentServerCode = inviteCode;
         loadServerByCode(serverMatch[1]);
         return;
     }
@@ -224,13 +238,11 @@ function openVoiceChannel(channelId, channelName) {
     lastOpenedChannelName = channelName;
     lastOpenedChannelType = "voice";
 
-    activeVoiceServerCode = document.querySelector(`.server-item[data-server-id="${currentServerId}"]`)?.dataset.serverInviteCode || null;
-
     const callPanel = document.getElementById("call-panel");
 
     // FIX : si on clique sur le salon où on est déjà (même en arrière-plan), on revient dedans au lieu de rejoindre
     if (callPanel.classList.contains("call-active") &&
-        document.getElementById("call-panel-name").textContent === channelName) {
+        String(activeVoiceChannelId) === String(channelId)) {
 
         document.getElementById("chat-placeholder").style.display = "none";
         document.getElementById("chat-panel").classList.remove("active");
@@ -247,6 +259,7 @@ function openVoiceChannel(channelId, channelName) {
         return;
     }
 
+    activeVoiceServerCode = document.querySelector(`.server-item[data-server-id="${currentServerId}"]`)?.dataset.serverInviteCode || null;
     document.getElementById("chat-placeholder").style.display = "none";
     document.getElementById("chat-panel").classList.remove("active");
     callPanel.classList.add("active");
@@ -266,7 +279,7 @@ function openVoiceChannel(channelId, channelName) {
     if (typeof initCallPage === "function") initCallPage(channelId);
     setTimeout(() => { if (typeof startCall === "function") startCall(channelId, videos); }, 100);
 
-    localStorage.setItem("lastChannel", JSON.stringify({ id: channelId, name: channelName, type: "voice", serverCode: document.querySelector(".server-item.active-server")?.dataset.serverInviteCode }));
+    localStorage.setItem("lastChannel", JSON.stringify({ id: channelId, name: channelName, type: "voice", serverCode: currentServerCode }));
 }
 
 function openTextChannel(channelId, channelName) {
@@ -300,6 +313,7 @@ function openTextChannel(channelId, channelName) {
     document.getElementById("chat-panel").classList.add("active");
 
     localStorage.setItem("lastChannel", JSON.stringify({ id: channelId, name: channelName, type: "text", serverCode: activeVoiceServerCode || document.querySelector(".server-item.active-server")?.dataset.serverInviteCode }));
+    saveLastTextChannel(currentServerCode, channelId, channelName);
     loadMessages(channelId);
 }
 
@@ -1498,16 +1512,31 @@ async function loadServerByCode(inviteCode) {
 
     // FIX : rouvrir le dernier salon consulté après un refresh
     const saved = localStorage.getItem("lastChannel");
+    let restored = false;
     if (saved) {
         const ch = JSON.parse(saved);
         if (ch.serverCode === inviteCode) {
+            restored = true;
             setTimeout(() => {
                 if (ch.type === "text") openTextChannel(ch.id, ch.name);
                 else openVoiceChannel(ch.id, ch.name);
             }, 200);
         }
     }
-}
+
+    // FIX : sinon, rouvrir le dernier salon textuel de CE serveur
+        if (!restored) {
+            const last = getLastTextChannels()[inviteCode];
+            if (last) {
+                setTimeout(() => {
+                    if (currentServerCode !== inviteCode) return; // tu as déjà changé de serveur entre-temps
+                    if (document.querySelector(`#text-channels .ch-item[data-channel-id="${last.id}"]`)) {
+                        openTextChannel(last.id, last.name);
+                    }
+                }, 200);
+            }
+        }
+    }
 
 // =============================================
 // ACCÈS RAPIDE
