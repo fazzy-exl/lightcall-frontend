@@ -440,6 +440,11 @@ h1 {
     flex-shrink: 0;
     object-fit: cover;
 }
+
+.chat-avatar-img {
+    display: block;
+}
+
 .chat-avatar {
     display: flex;
     align-items: center;
