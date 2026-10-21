@@ -2298,23 +2298,20 @@ function getContainerUserId(container) {
 let lastBubbleSourceId = null;
 
 function pickBubbleSource() {
-    // Garde la même source tant qu'elle reste valide, pour éviter que la bulle
-    // saute d'une caméra à l'autre à cause d'un petit bruit ponctuel
-    if (lastBubbleSourceId) {
+    // Garde la même source tant qu'elle reste valide (jamais la bulle elle-même)
+    if (lastBubbleSourceId && lastBubbleSourceId !== "bubble-video-container") {
         const current = document.getElementById(lastBubbleSourceId);
         if (current && current.classList.contains("video-container") && !current.classList.contains("cam-off")) {
-            const otherSpeaking = document.querySelector(".video-container.speaking:not(.cam-off)");
-            if (current.classList.contains("speaking") || !otherSpeaking || otherSpeaking === current) {
-                return current;
-            }
+            const otherSpeaking = document.querySelector(".video-container.speaking:not(.cam-off):not(#bubble-video-container)");
+            if (current.classList.contains("speaking") || !otherSpeaking) return current;
         }
     }
 
     // 1. Caméra de quelqu'un qui parle actuellement
-    const speaking = document.querySelector(".video-container.speaking:not(.cam-off)");
+    const speaking = document.querySelector(".video-container.speaking:not(.cam-off):not(#bubble-video-container)");
     if (speaking) { lastBubbleSourceId = speaking.id; return speaking; }
 
-    // 2. N'importe quelle caméra ouverte (priorité aux caméras avant le partage)
+    // 2. N'importe quelle caméra ouverte
     const anyCam = document.querySelector(".video-container:not(.cam-off):not(#bubble-video-container)");
     if (anyCam) { lastBubbleSourceId = anyCam.id; return anyCam; }
 
