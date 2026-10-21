@@ -423,13 +423,12 @@ h1 {
     transition: background 0.1s;
 }
 
-.chat-message:hover { background: transparent; }
+.chat-message:hover { background: rgba(255, 255, 255, 0.03); }
 
 .chat-line {
     position: relative;
     border-radius: 4px;
 }
-.chat-line:hover { background: rgba(255, 255, 255, 0.03); }
 
 /* Heure affichée dans la marge de gauche quand on survole une ligne (comme Discord) */
 .chat-line .chat-time-hover {
