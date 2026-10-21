@@ -425,6 +425,14 @@ h1 {
 
 .chat-message:hover { background: rgba(255, 255, 255, 0.03); }
 
+/* Surlignage au survol : tout le groupe de messages s'allume (style Discord) */
+#chat-messages .chat-message:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+#chat-messages .chat-line:hover {
+    background: transparent;
+}
+
 .chat-line {
     position: relative;
     border-radius: 4px;
