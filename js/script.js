@@ -2382,6 +2382,22 @@ function updateCallBubble() {
 }
 
 let bubbleInterval = setInterval(updateCallBubble, 1000);
+
+// Réagit tout de suite quand quelqu'un commence/arrête de parler (ou coupe sa caméra),
+// au lieu d'attendre le prochain tick de l'intervalle
+(function watchSpeakingForBubble() {
+    const videosEl = document.getElementById("videos");
+    if (!videosEl) return;
+
+    new MutationObserver(() => {
+        updateCallBubble();
+    }).observe(videosEl, {
+        attributes: true,
+        attributeFilter: ["class"],
+        subtree: true
+    });
+})();
+
 updateCallBubble();
 
 // Boutons de la bulle
