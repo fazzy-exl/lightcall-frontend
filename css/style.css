@@ -403,7 +403,7 @@ h1 {
 #chat-messages {
     flex: 1;
     overflow-y: auto;
-    padding: 16px;
+    padding: 16px 125px 16px 16px;
     display: flex;
     flex-direction: column;
     gap: 0px; /* ← retire le gap, laisse les margin-top faire le travail */
