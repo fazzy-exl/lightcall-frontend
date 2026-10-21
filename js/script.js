@@ -115,7 +115,6 @@ function router() {
     const serverMatch = path.match(/^\/server\/([a-zA-Z0-9_-]+)(?:\/[^/]*)?\/?\s*$/);
     if (serverMatch) {
         showPage("page-server-view");
-        currentServerCode = inviteCode;
         loadServerByCode(serverMatch[1]);
         return;
     }
@@ -1404,6 +1403,10 @@ function toSlug(name) {
 
 async function loadServerByCode(inviteCode) {
     showPage("page-server-view");
+    async function loadServerByCode(inviteCode) {
+        showPage("page-server-view");
+        currentServerCode = inviteCode;
+        currentChannelId = null;
     currentChannelId = null;
     lastMessageUserId = null;
 
