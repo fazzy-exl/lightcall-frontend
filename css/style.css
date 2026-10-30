@@ -2208,11 +2208,6 @@ body.has-dev-banner #call-video-bubble {
     transition: opacity 0.25s ease;
 }
 
-/* La fenêtre de choix d'écran n'apparaîtrait pas par-dessus le plein écran */
-#call-panel:fullscreen #shareBtn {
-    display: none !important;
-}
-
 #call-panel.controls-hidden:fullscreen {
     cursor: none;
 }
