@@ -1,5 +1,4 @@
 debugger;
-console.log("LightCall script chargé");
 
 const API = "https://lightcall-backend.onrender.com";
 
@@ -550,15 +549,12 @@ function updateAuthUI() {
 }
 
 async function loadUserProfile() {
-    console.log("DEBUG: loadUserProfile appelée, currentUserId =", currentUserId);
     const userIcon = document.getElementById("user-icon");
 
     if (userIcon) userIcon.classList.add("ready");
 
     if (!currentUserId) {
-        console.log("DEBUG: pas connecté, appel notifyAppReady");
         if (window.electronAPI && window.electronAPI.notifyAppReady) {
-            console.log("DEBUG: electronAPI existe, on appelle notifyAppReady");
             window.electronAPI.notifyAppReady();
         } else {
             console.log("DEBUG: electronAPI n'existe PAS !");
@@ -2790,6 +2786,59 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
 
     setInterval(check, 5 * 60 * 1000);
     document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+})();
+
+// --- Plein écran de l'appel (style Discord) ---
+(function setupCallFullscreen() {
+    const panel = document.getElementById("call-panel");
+    const btn = document.getElementById("fullscreenBtn");
+    const videos = document.getElementById("videos");
+    if (!panel || !btn || !videos) return;
+
+    const hasVideoToShow = () =>
+        !!videos.querySelector(".video-container:not(.cam-off), [id^='screen_container_']");
+
+    // Affiche le bouton seulement s'il y a une caméra ou un partage à voir
+    function refresh() {
+        const inCall = panel.classList.contains("call-active");
+        const visible = panel.style.display !== "none";
+        const available = inCall && visible && hasVideoToShow();
+        btn.classList.toggle("hidden", !available);
+        if (!available && document.fullscreenElement === panel) document.exitFullscreen();
+    }
+
+    new MutationObserver(refresh).observe(videos, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ["class"]
+    });
+    new MutationObserver(refresh).observe(panel, {
+        attributes: true, attributeFilter: ["class", "style"]
+    });
+
+    btn.addEventListener("click", () => {
+        if (document.fullscreenElement === panel) document.exitFullscreen();
+        else panel.requestFullscreen().catch(e => console.error("Plein écran refusé:", e));
+    });
+
+    // Double-clic sur les vidéos = même chose que le bouton
+    videos.addEventListener("dblclick", () => {
+        if (!btn.classList.contains("hidden")) btn.click();
+    });
+
+    // Cache les contrôles après 2,5 s sans bouger la souris (en plein écran seulement)
+    let hideTimer = null;
+    function wake() {
+        panel.classList.remove("controls-hidden");
+        clearTimeout(hideTimer);
+        if (document.fullscreenElement === panel) {
+            hideTimer = setTimeout(() => panel.classList.add("controls-hidden"), 2500);
+        }
+    }
+    panel.addEventListener("mousemove", wake);
+
+    document.addEventListener("fullscreenchange", () => {
+        btn.title = document.fullscreenElement === panel ? "Quitter le plein écran" : "Plein écran";
+        wake();
+    });
 })();
 
 // Charger au démarrage
