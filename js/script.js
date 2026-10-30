@@ -2800,6 +2800,7 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
 
     // Affiche le bouton seulement s'il y a une caméra ou un partage à voir
     function refresh() {
+        panel.classList.toggle("is-sharing", !!document.getElementById("screen_container_" + localStorage.getItem("userId")));
         const inCall = panel.classList.contains("call-active");
         const visible = panel.style.display !== "none";
         const available = inCall && visible && hasVideoToShow();
