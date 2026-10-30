@@ -2801,9 +2801,10 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
     // Affiche le bouton seulement s'il y a une caméra ou un partage à voir
     function refresh() {
         panel.classList.toggle("is-sharing", !!document.getElementById("screen_container_" + localStorage.getItem("userId")));
+        // Le bouton est dispo dès qu'on est dans un appel affiché à l'écran
         const inCall = panel.classList.contains("call-active");
         const visible = panel.style.display !== "none";
-        const available = inCall && visible && hasVideoToShow();
+        const available = inCall && visible;
         btn.classList.toggle("hidden", !available);
         if (!available && document.fullscreenElement === panel) document.exitFullscreen();
     }
