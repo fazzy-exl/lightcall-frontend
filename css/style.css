@@ -1818,16 +1818,49 @@ body.has-dev-banner #main-content {
     display: none;
 }
 
+#screen-share-tabs {
+    display: flex;
+    justify-content: center;
+    gap: 6px;
+    margin: 4px 0 8px;
+}
+
+.screen-tab {
+    margin: 0;
+    padding: 8px 20px;
+    border: 2px solid transparent;
+    border-radius: 6px;
+    background: #2a2d31;
+    color: #b5b8bd;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background 0.15s, color 0.15s;
+}
+.screen-tab:hover { background: #32363b; color: white; }
+.screen-tab.active {
+    color: white;
+    background:
+            linear-gradient(#3a3d42, #3a3d42) padding-box,
+            linear-gradient(135deg, #ff4d8f, #ff7c2a) border-box;
+}
+
 #screen-sources-grid {
-    display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     gap: 10px;
-    max-height: 400px;
+    max-height: 380px;
     overflow-y: auto;
-    margin: 14px 0;
+    overflow-x: hidden;
+    margin: 10px 0 14px;
+    color-scheme: dark;
+    scrollbar-width: thin;
 }
 
 .screen-source-item {
+    flex: 0 0 calc(50% - 5px);
+    min-width: 0;
+    box-sizing: border-box;
     background: #2a2d31;
     border: 2px solid transparent;
     border-radius: 8px;
@@ -1847,7 +1880,7 @@ body.has-dev-banner #main-content {
 .screen-source-item img {
     width: 100%;
     height: 90px;
-    object-fit: cover;
+    object-fit: contain;
     border-radius: 6px;
     background: #111;
     margin-bottom: 6px;
@@ -1861,6 +1894,8 @@ body.has-dev-banner #main-content {
     overflow: hidden;
     text-overflow: ellipsis;
 }
+
+.screen-empty { color: #888; width: 100%; text-align: center; margin: 20px 0; }
 
 /* Rangée titre de section + bouton ajouter un salon */
 .ch-section-row {
@@ -2088,3 +2123,41 @@ body.has-dev-banner #call-video-bubble {
     border-right: 2px solid rgba(255, 255, 255, 0.6);
     border-top: 2px solid rgba(255, 255, 255, 0.6);
 }
+
+.update-banner {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: #1e1e1e;
+    color: #ddd;
+    padding: 10px 14px 10px 18px;
+    border-radius: 10px;
+    font-size: 0.9rem;
+    z-index: 40000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.5);
+    border: 2px solid transparent;
+    background:
+            linear-gradient(#1e1e1e, #1e1e1e) padding-box,
+            linear-gradient(135deg, #ff4d8f, #ff7c2a) border-box;
+}
+.update-banner button {
+    margin: 0;
+    padding: 6px 14px;
+    border: none;
+    border-radius: 6px;
+    background: linear-gradient(135deg, #ff4d8f, #ff7c2a);
+    color: white;
+    font-weight: 600;
+    cursor: pointer;
+}
+.update-banner .update-banner-close {
+    background: transparent;
+    color: #888;
+    padding: 4px 8px;
+    font-size: 1.1rem;
+}
+.update-banner .update-banner-close:hover { color: white; }

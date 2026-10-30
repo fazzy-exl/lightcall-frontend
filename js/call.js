@@ -1,7 +1,55 @@
 // ---------------------------------------------
 // WebSocket — une seule connexion globale
 // ---------------------------------------------
-const ws = new WebSocket("wss://lightcall-backend.onrender.com");
+let ws = null;
+let callChannelId = null;   // salon où on est (sert à se reconnecter)
+let wsRetry = 0;
+
+function wsSend(obj) {
+    if (ws && ws.readyState === WebSocket.OPEN) {
+        ws.send(typeof obj === "string" ? obj : JSON.stringify(obj));
+    }
+}
+
+function showReconnectBanner(show) {
+    let el = document.getElementById("reconnect-banner");
+    if (!show) { if (el) el.remove(); return; }
+    if (el) return;
+    el = document.createElement("div");
+    el.id = "reconnect-banner";
+    el.textContent = "Connexion perdue, reconnexion en cours…";
+    el.style.cssText = "position:fixed;bottom:20px;left:50%;transform:translateX(-50%);" +
+        "background:#faa61a;color:#111;padding:10px 18px;border-radius:8px;" +
+        "font-size:0.9rem;font-weight:600;z-index:40000;";
+    document.body.appendChild(el);
+}
+
+function connectCallWs() {
+    ws = new WebSocket("wss://lightcall-backend.onrender.com");
+    ws.onmessage = onCallMessage;
+
+    ws.onopen = () => {
+        wsRetry = 0;
+        showReconnectBanner(false);
+        // On était en appel : on se ré-annonce au serveur (les connexions vidéo existantes ne sont pas refaites)
+        if (localStream && callChannelId) {
+            const userId = localStorage.getItem("userId");
+            wsSend({ type: "join", id: userId, channel: callChannelId });
+            wsSend({ type: "mic", id: userId, enabled: micEnabled });
+            wsSend({ type: "cam", id: userId, enabled: cameraEnabled });
+        }
+    };
+
+    ws.onclose = () => {
+        if (callChannelId) showReconnectBanner(true);
+        const delay = Math.min(1000 * 2 ** wsRetry, 8000);
+        wsRetry++;
+        setTimeout(connectCallWs, delay);
+    };
+
+    ws.onerror = () => ws.close();
+}
+connectCallWs();
 
 let localStream = null;
 let audioCtx = null; // ← ajoute en haut avec les autres variables
@@ -71,7 +119,9 @@ async function startCall(channelId, videosDiv) {
         if (video) detectSpeaking(localStream, video);
     }, 200);
 
-    ws.send(JSON.stringify({
+    callChannelId = channelId;
+
+    wsSend(JSON.stringify({
         type: "join",
         id: userId,
         channel: channelId
@@ -83,7 +133,7 @@ async function startCall(channelId, videosDiv) {
 // ---------------------------------------------
 // 2) WebSocket messages
 // ---------------------------------------------
-ws.onmessage = async (msg) => {
+async function onCallMessage(msg) {
     const data = JSON.parse(msg.data);
     const userId = localStorage.getItem("userId");
     if (data.id === userId) return;
@@ -91,9 +141,15 @@ ws.onmessage = async (msg) => {
     const videosDiv = document.getElementById("videos");
 
     switch (data.type) {
-        case "join":
-            if (localStream) createPeerConnection(data.id, true, videosDiv);
+        case "join": {
+            if (!localStream) break;
+            const existing = peers[data.id];
+            const state = existing && existing.pc.connectionState;
+            // Connexion encore saine (ex: l'autre vient juste de se reconnecter) : on ne la refait pas
+            if (existing && (state === "connected" || state === "connecting")) break;
+            createPeerConnection(data.id, true, videosDiv);
             break;
+        }
 
         case "offer":
             await handleOffer(data, videosDiv);
@@ -136,7 +192,7 @@ ws.onmessage = async (msg) => {
             }
             break;
     }
-};
+}
 
 // ---------------------------------------------
 // 3) WebRTC
@@ -155,6 +211,8 @@ function createPeerConnection(remoteId, isInitiator, videosDiv) {
         ]
     });
 
+    if (peers[remoteId]) peers[remoteId].pc.close();
+
     peers[remoteId] = { pc };
 
     localStream.getTracks().forEach(track => pc.addTrack(track, localStream));
@@ -171,7 +229,7 @@ function createPeerConnection(remoteId, isInitiator, videosDiv) {
 
     pc.onicecandidate = (event) => {
         if (event.candidate) {
-            ws.send(JSON.stringify({
+            wsSend(JSON.stringify({
                 type: "ice",
                 id: userId,
                 target: remoteId,
@@ -187,7 +245,7 @@ async function createOffer(remoteId, userId) {
     const pc = peers[remoteId].pc;
     const offer = await pc.createOffer();
     await pc.setLocalDescription(offer);
-    ws.send(JSON.stringify({ type: "offer", id: userId, target: remoteId, offer }));
+    wsSend(JSON.stringify({ type: "offer", id: userId, target: remoteId, offer }));
 }
 
 async function handleOffer(data, videosDiv) {
@@ -197,7 +255,7 @@ async function handleOffer(data, videosDiv) {
     await pc.setRemoteDescription(new RTCSessionDescription(data.offer));
     const answer = await pc.createAnswer();
     await pc.setLocalDescription(answer);
-    ws.send(JSON.stringify({ type: "answer", id: userId, target: data.id, answer }));
+    wsSend(JSON.stringify({ type: "answer", id: userId, target: data.id, answer }));
 }
 
 async function handleAnswer(data) {
@@ -277,7 +335,7 @@ function toggleMic() {
     const container = document.getElementById("video_container_" + userId);
     if (container) container.classList.toggle("mic-off", !micEnabled);
 
-    ws.send(JSON.stringify({ type: "mic", id: userId, enabled: micEnabled }));
+    wsSend(JSON.stringify({ type: "mic", id: userId, enabled: micEnabled }));
 }
 
 // Variable d'état caméra (en haut du fichier, avec les autres variables)
@@ -299,7 +357,7 @@ async function toggleCamera() {
         if (ph) ph.style.display = "";
         cameraEnabled = false;
 
-        ws.send(JSON.stringify({ type: "cam", id: userId, enabled: false }));
+        wsSend(JSON.stringify({ type: "cam", id: userId, enabled: false }));
 
     } else {
         camOnSound.play().catch(() => {});
@@ -343,7 +401,7 @@ async function toggleCamera() {
             container.classList.remove("cam-off");
             cameraEnabled = true;
 
-            ws.send(JSON.stringify({ type: "cam", id: userId, enabled: true }));
+            wsSend(JSON.stringify({ type: "cam", id: userId, enabled: true }));
 
         } catch (e) {
             const sp = document.getElementById("cam-spinner-" + userId);
@@ -356,6 +414,7 @@ async function toggleCamera() {
 
 // Appelée quand on quitte l'appel
 function stopCall() {
+    callChannelId = null; // on quitte volontairement : pas de reconnexion automatique
     leaveSound.play().catch(() => {});
 
     // FIX : stopper le stream original (celui qui tient le vrai micro)
@@ -382,7 +441,7 @@ function stopCall() {
 
     const userId = localStorage.getItem("userId");
     if (ws.readyState === WebSocket.OPEN) {
-        ws.send(JSON.stringify({ type: "leave", id: userId }));
+        wsSend(JSON.stringify({ type: "leave", id: userId }));
     }
 
     cameraEnabled = true;
@@ -484,7 +543,7 @@ async function shareScreen() {
         screenTrack.onended = () => stopScreenShare();
 
     } catch (e) {
-        console.log("Partage d'écran annulé");
+        console.error("Erreur partage d'écran:", e.name, e.message);
     }
 }
 

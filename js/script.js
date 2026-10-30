@@ -2237,28 +2237,62 @@ document.addEventListener("contextmenu", (e) => {
 // =============================================
 
 if (window.electronAPI && window.electronAPI.onOpenScreenPicker) {
-    window.electronAPI.onOpenScreenPicker(async () => {
+    let allSources = [];
+    let currentTab = "window";
+
+    const renderScreenSources = () => {
         const grid = document.getElementById("screen-sources-grid");
         const popup = document.getElementById("screen-share-popup");
-        grid.innerHTML = `<p style="color:#888;grid-column:1/-1;text-align:center;">Chargement...</p>`;
-        popup.classList.remove("hidden");
-
-        const sources = await window.electronAPI.getScreenSources();
         grid.innerHTML = "";
 
-        sources.forEach(source => {
+        document.querySelectorAll(".screen-tab").forEach(t =>
+            t.classList.toggle("active", t.dataset.tab === currentTab)
+        );
+
+        const list = allSources.filter(s => s.id.startsWith(currentTab + ":"));
+        if (!list.length) {
+            grid.innerHTML = `<p class="screen-empty">Rien à afficher ici</p>`;
+            return;
+        }
+
+        list.forEach(source => {
             const div = document.createElement("div");
             div.className = "screen-source-item";
-            div.innerHTML = `
-                <img src="${source.thumbnail}" alt="">
-                <span>${source.name}</span>
-            `;
+
+            const img = document.createElement("img");
+            img.src = source.thumbnail;
+            img.alt = "";
+
+            const label = document.createElement("span");
+            label.textContent = source.name;
+
+            div.appendChild(img);
+            div.appendChild(label);
             div.onclick = () => {
                 window.electronAPI.selectScreenSource(source.id);
                 popup.classList.add("hidden");
             };
             grid.appendChild(div);
         });
+    };
+
+    document.querySelectorAll(".screen-tab").forEach(tab => {
+        tab.addEventListener("click", () => {
+            currentTab = tab.dataset.tab;
+            renderScreenSources();
+        });
+    });
+
+    window.electronAPI.onOpenScreenPicker(async () => {
+        const grid = document.getElementById("screen-sources-grid");
+        const popup = document.getElementById("screen-share-popup");
+        grid.innerHTML = `<p class="screen-empty">Chargement...</p>`;
+        popup.classList.remove("hidden");
+
+        allSources = await window.electronAPI.getScreenSources();
+        // Onglet "Applications" par défaut (comme Discord), sauf s'il n'y en a aucune
+        currentTab = allSources.some(s => s.id.startsWith("window:")) ? "window" : "screen";
+        renderScreenSources();
     });
 
     const cancelScreenShare = document.getElementById("cancel-screen-share");
@@ -2709,6 +2743,54 @@ function adjustBubbleTopForBanner() {
 }
 
 window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
+
+// --- Bandeau "Nouvelle version disponible" ---
+(function watchForNewVersion() {
+    const src = document.querySelector('script[src*="script.js"]')?.getAttribute("src") || "";
+    const current = src.match(/\?v=(\d+)/)?.[1];
+    if (!current) return;
+    let shown = false;
+
+    function showUpdateBanner() {
+        const inCall = typeof localStream !== "undefined" && !!localStream;
+        const bar = document.createElement("div");
+        bar.className = "update-banner";
+
+        const text = document.createElement("span");
+        text.textContent = inCall
+            ? "Nouvelle version disponible (recharge quand ton appel est terminé)"
+            : "Nouvelle version de LightCall disponible";
+
+        const btn = document.createElement("button");
+        btn.textContent = "Recharger";
+        btn.onclick = () => {
+            if (inCall && !confirm("Tu es en appel, recharger va te déconnecter. Continuer ?")) return;
+            location.reload();
+        };
+
+        const close = document.createElement("button");
+        close.className = "update-banner-close";
+        close.textContent = "×";
+        close.onclick = () => bar.remove();
+
+        bar.append(text, btn, close);
+        document.body.appendChild(bar);
+    }
+
+    async function check() {
+        if (shown) return;
+        try {
+            const res = await fetch("/", { cache: "no-store" });
+            if (!res.ok) return;
+            const html = await res.text();
+            const latest = html.match(/script\.js\?v=(\d+)/)?.[1];
+            if (latest && latest !== current) { shown = true; showUpdateBanner(); }
+        } catch (e) { /* hors ligne : on réessaiera */ }
+    }
+
+    setInterval(check, 5 * 60 * 1000);
+    document.addEventListener("visibilitychange", () => { if (!document.hidden) check(); });
+})();
 
 // Charger au démarrage
 loadQuickAccess();
