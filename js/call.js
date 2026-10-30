@@ -62,7 +62,6 @@ const peers = {};
 // On n'exécute RIEN automatiquement au chargement.
 // ---------------------------------------------
 function initCallPage(channelId) {
-    console.log("Page call initialisée pour le salon :", channelId);
 
     // Réinitialiser l'état visuel
     const videosDiv = document.getElementById("videos");
@@ -452,8 +451,6 @@ function stopCall() {
     if (callPanel) callPanel.classList.remove("call-active");
     const joinBtn = document.getElementById("joinBtn");
     if (joinBtn) { joinBtn.style.display = "block"; joinBtn.disabled = false; }
-
-    console.log("Appel terminé, caméra et micro fermés.");
 }
 
 async function resetCamera(withVideo = true) {
@@ -536,8 +533,6 @@ async function shareScreen() {
         }
 
         screenSharing = true;
-        shareBtn.textContent = "Arrêter le partage";
-        shareBtn.style.background = "#d9534f";
 
         // Si l'utilisateur arrête via le bouton natif du navigateur
         screenTrack.onended = () => stopScreenShare();
@@ -566,8 +561,6 @@ function stopScreenShare() {
     }
 
     screenSharing = false;
-    shareBtn.textContent = "Partager";
-    shareBtn.style.background = "";
 }
 
 function addScreenStream(stream, userId, videosDiv) {

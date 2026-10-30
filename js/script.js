@@ -2843,6 +2843,31 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
     });
 })();
 
+// --- Icônes des boutons d'appel : état synchronisé avec la vidéo locale ---
+(function setupCallControlIcons() {
+    const videos = document.getElementById("videos");
+    const micBtn = document.getElementById("toggleMicBtn");
+    const camBtn = document.getElementById("toggleCamBtn");
+    const shareBtn = document.getElementById("shareBtn");
+    if (!videos || !micBtn || !camBtn || !shareBtn) return;
+
+    function sync() {
+        const userId = localStorage.getItem("userId");
+        const mine = document.getElementById("video_container_" + userId);
+        const sharing = !!document.getElementById("screen_container_" + userId);
+
+        micBtn.classList.toggle("off", !!mine && mine.classList.contains("mic-off"));
+        camBtn.classList.toggle("off", !mine || mine.classList.contains("cam-off"));
+        shareBtn.classList.toggle("live", sharing);
+        shareBtn.title = sharing ? "Arrêter le partage" : "Partager l'écran";
+    }
+
+    new MutationObserver(sync).observe(videos, {
+        childList: true, subtree: true, attributes: true, attributeFilter: ["class"]
+    });
+    sync();
+})();
+
 // Charger au démarrage
 loadQuickAccess();
 

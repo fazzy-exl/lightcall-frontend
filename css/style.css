@@ -1058,7 +1058,7 @@ h1 {
 .call-active #toggleMicBtn,
 .call-active #shareBtn,
 .call-active #call-leave-btn {
-    display: block;
+    display: flex;
 }
 
 #mini-call-bar {
@@ -2251,3 +2251,46 @@ body.has-dev-banner #call-video-bubble {
 #call-panel:fullscreen:not(.is-sharing) #shareBtn {
     display: none !important;
 }
+
+/* =============================================
+   BOUTONS D'APPEL — ICÔNES RONDES
+============================================= */
+#call-panel #controls .ctrl-btn {
+    width: 48px;
+    height: 48px;
+    padding: 0;
+    border-radius: 50%;
+    border: none;
+    align-items: center;
+    justify-content: center;
+    background: #3a3a3a;
+    color: white;
+    cursor: pointer;
+    transition: background 0.15s, transform 0.1s;
+}
+
+#call-panel #controls .ctrl-btn svg {
+    width: 22px;
+    height: 22px;
+    display: block;
+}
+
+#call-panel #controls .ctrl-btn:hover { background: #4a4a4a; }
+#call-panel #controls .ctrl-btn:active { transform: scale(0.93); }
+
+/* Barre diagonale : visible seulement quand c'est coupé */
+#controls .ctrl-btn .slash { display: none; }
+#controls .ctrl-btn.off .slash { display: block; }
+
+/* Micro / caméra coupés */
+#call-panel #controls .ctrl-btn.off { background: #d9534f; }
+#call-panel #controls .ctrl-btn.off:hover { background: #c9302c; }
+
+/* Partage en cours */
+#call-panel #controls #shareBtn.live { background: #43b581; }
+#call-panel #controls #shareBtn.live:hover { background: #3aa070; }
+
+/* Quitter : toujours rouge, combiné horizontal */
+#call-panel #controls #call-leave-btn { background: #d9534f; }
+#call-panel #controls #call-leave-btn:hover { background: #c9302c; }
+#call-leave-btn .hangup { transform: rotate(135deg); }
