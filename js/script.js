@@ -2868,6 +2868,98 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
     sync();
 })();
 
+// --- Mode focus : avec 2 bulles, un clic agrandit l'une et écrase l'autre ---
+(function setupVideoFocus() {
+    const videos = document.getElementById("videos");
+    if (!videos) return;
+
+    const STRIP = "96px"; // largeur de la bulle écrasée
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    let focused = null;
+    let clickTimer = null;
+
+    function getTiles() {
+        return [...videos.children].filter(el =>
+            el.id && (el.id.startsWith("video_container_") || el.id.startsWith("screen_container_"))
+        );
+    }
+
+    function applyLayout(tiles, target) {
+        tiles.forEach(t => {
+            t.classList.toggle("is-squashed", !!target && t !== target);
+        });
+        videos.classList.toggle("focus-mode", !!target);
+        if (target) {
+            const first = tiles[0] === target;
+            videos.style.gridTemplateColumns = first
+                ? "minmax(0, 1fr) " + STRIP
+                : STRIP + " minmax(0, 1fr)";
+            videos.style.gridTemplateRows = "minmax(0, 1fr)";
+        } else {
+            videos.style.gridTemplateColumns = "";
+            videos.style.gridTemplateRows = "";
+        }
+    }
+
+    // Technique FLIP : on mesure avant/après, puis on anime la différence
+    function setFocus(target) {
+        const tiles = getTiles();
+        const before = new Map(tiles.map(t => [t, t.getBoundingClientRect()]));
+        focused = target;
+        applyLayout(tiles, target);
+        if (reduceMotion) return;
+
+        tiles.forEach(t => {
+            const a = before.get(t);
+            const b = t.getBoundingClientRect();
+            if (!a.width || !a.height || !b.width || !b.height) return;
+            const dx = a.left - b.left;
+            const dy = a.top - b.top;
+            const sx = a.width / b.width;
+            const sy = a.height / b.height;
+            const squashed = t.classList.contains("is-squashed");
+            t.animate(
+                [
+                    { transformOrigin: "top left", transform: `translate(${dx}px, ${dy}px) scale(${sx}, ${sy})` },
+                    { transformOrigin: "top left", transform: "none" }
+                ],
+                {
+                    duration: squashed ? 650 : 500,
+                    // la bulle écrasée rebondit un peu, l'autre arrive en douceur
+                    easing: squashed ? "cubic-bezier(.3, 1.6, .5, 1)" : "cubic-bezier(.22, 1, .36, 1)"
+                }
+            );
+        });
+    }
+
+    function refresh() {
+        const tiles = getTiles();
+        const can = tiles.length === 2;
+        videos.classList.toggle("can-focus", can);
+        // Si le nombre de bulles change, on remet tout à plat
+        if (!can || (focused && !tiles.includes(focused))) {
+            focused = null;
+            applyLayout(tiles, null);
+        }
+    }
+
+    videos.addEventListener("click", (e) => {
+        const tile = e.target.closest(".video-container");
+        if (!tile || !videos.classList.contains("can-focus")) return;
+        // petit délai pour ne pas se battre avec le double-clic (plein écran)
+        clearTimeout(clickTimer);
+        clickTimer = setTimeout(() => {
+            if (!getTiles().includes(tile)) return;
+            setFocus(focused === tile ? null : tile);
+        }, 220);
+    });
+
+    videos.addEventListener("dblclick", () => clearTimeout(clickTimer));
+
+    new MutationObserver(refresh).observe(videos, { childList: true });
+    refresh();
+})();
+
 // Charger au démarrage
 loadQuickAccess();
 
