@@ -2332,3 +2332,16 @@ body.has-dev-banner #call-video-bubble {
 /* Plein écran : 2× plus grande */
 #call-panel:fullscreen #videos            { --squash-strip: 520px; }
 #call-panel:fullscreen #videos.squash-square { --squash-strip: 380px; }
+
+/* Plein écran : le cadre colle à la caméra / au partage (16:9, centré) */
+#call-panel:fullscreen #videos {
+    place-items: center;
+}
+
+#call-panel:fullscreen #videos .video-container:not(.is-squashed) {
+    width: 100%;
+    height: auto;
+    aspect-ratio: 16 / 9;
+    max-height: 100%;
+    max-width: calc(100cqh * 16 / 9);
+}
