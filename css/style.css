@@ -2346,10 +2346,13 @@ body.has-dev-banner #call-video-bubble {
     max-width: calc(100cqh * 16 / 9);
 }
 
-/* Espace entre les bulles */
+/* Espace entre les bulles et avec les bords */
 #call-panel #videos {
     gap: 16px;
+    padding: 40px 24px 24px 24px;
 }
+
 #call-panel:fullscreen #videos {
     gap: 24px;
+    padding: 56px 32px 32px 32px; /* un peu plus en haut pour le titre du salon */
 }
