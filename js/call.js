@@ -570,7 +570,7 @@ function addScreenStream(stream, userId, videosDiv) {
     const container = document.createElement("div");
     container.id = "screen_container_" + userId;
     container.className = "video-container";
-    container.style.border = "4px solid #5865f2";
+    container.classList.add("screen-share");
 
     const label = document.createElement("div");
     label.style.cssText = `
