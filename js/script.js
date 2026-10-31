@@ -2904,8 +2904,8 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
         if (target) {
             const first = tiles[0] === target;
             videos.style.gridTemplateColumns = first
-                ? "minmax(0, 1fr) " + shape.strip
-                : shape.strip + " minmax(0, 1fr)";
+                ? "minmax(0, 1fr) var(--squash-strip)"
+                : "var(--squash-strip) minmax(0, 1fr)";
             videos.style.gridTemplateRows = "minmax(0, 1fr)";
         } else {
             videos.style.gridTemplateColumns = "";

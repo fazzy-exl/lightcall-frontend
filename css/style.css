@@ -2324,3 +2324,11 @@ body.has-dev-banner #call-video-bubble {
 #call-panel #videos.squash-square .video-container.is-squashed[id^="video_container_"] .call-video {
     object-fit: cover;
 }
+
+/* Largeur de la vignette (mode focus) */
+#videos                                   { --squash-strip: 260px; }
+#videos.squash-square                     { --squash-strip: 190px; }
+
+/* Plein écran : 2× plus grande */
+#call-panel:fullscreen #videos            { --squash-strip: 520px; }
+#call-panel:fullscreen #videos.squash-square { --squash-strip: 380px; }
