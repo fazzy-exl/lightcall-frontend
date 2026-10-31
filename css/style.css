@@ -2294,3 +2294,15 @@ body.has-dev-banner #call-video-bubble {
 #call-panel #controls #call-leave-btn { background: #d9534f; }
 #call-panel #controls #call-leave-btn:hover { background: #c9302c; }
 #call-leave-btn .hangup { transform: rotate(135deg); }
+
+/* =============================================
+   LIMITE EN HAUTEUR DES CAMÉRAS (zone d'appel)
+============================================= */
+#call-panel #videos {
+    container-type: size;   /* permet d'utiliser la hauteur disponible (cqh) */
+}
+
+#call-panel #videos .video-container {
+    /* largeur max = hauteur disponible × 16/9 → la hauteur ne dépasse jamais la zone */
+    max-width: calc(100cqh * 16 / 9);
+}
