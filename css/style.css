@@ -2303,22 +2303,24 @@ body.has-dev-banner #call-video-bubble {
 }
 
 /* =============================================
-   MODE FOCUS : 2 bulles, l'une écrase l'autre
+   MODE FOCUS : 2 bulles, l'une rapetisse sur le côté
 ============================================= */
 #videos.can-focus .video-container { cursor: pointer; }
 
-/* La bulle écrasée : barre étroite pleine hauteur */
+/* La bulle rapetissée : garde sa forme (16:9 ou carré), vue en entier */
 #call-panel #videos .video-container.is-squashed {
-    aspect-ratio: auto;
+    aspect-ratio: var(--squash-ratio, 16 / 9);
     width: 100%;
-    height: 100%;
+    height: auto;
     max-width: none;
-    opacity: 0.7;
+    max-height: 100%;
+    opacity: 0.8;
     transition: opacity 0.2s ease, border-color 0.15s ease, box-shadow 0.15s ease;
 }
 #call-panel #videos .video-container.is-squashed:hover { opacity: 1; }
-#call-panel #videos .video-container.is-squashed .call-video { object-fit: cover; }
 
-/* Dans la barre étroite, on cache le nom pour ne pas qu'il déborde */
-#videos .video-container.is-squashed .video-name,
-#videos .video-container.is-squashed .name-label { display: none; }
+/* Partage d'écran : on voit tout le contenu. Caméra en mode carré : on remplit. */
+#call-panel #videos .video-container.is-squashed .call-video { object-fit: contain; }
+#call-panel #videos.squash-square .video-container.is-squashed[id^="video_container_"] .call-video {
+    object-fit: cover;
+}

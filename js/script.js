@@ -2873,7 +2873,15 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
     const videos = document.getElementById("videos");
     if (!videos) return;
 
-    const STRIP = "96px"; // largeur de la bulle écrasée
+    const SHAPES = {
+        wide:   { strip: "260px", ratio: "16 / 9" },
+        square: { strip: "190px", ratio: "1 / 1" }
+    };
+    function getShape() {
+        let name = "wide";
+        try { name = localStorage.getItem("squashShape") || "wide"; } catch (e) {}
+        return SHAPES[name] ? name : "wide";
+    }
     const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
     let focused = null;
     let clickTimer = null;
@@ -2885,15 +2893,19 @@ window.adjustBubbleTopForBanner = adjustBubbleTopForBanner;
     }
 
     function applyLayout(tiles, target) {
+        const shapeName = getShape();
+        const shape = SHAPES[shapeName];
         tiles.forEach(t => {
             t.classList.toggle("is-squashed", !!target && t !== target);
         });
         videos.classList.toggle("focus-mode", !!target);
+        videos.classList.toggle("squash-square", shapeName === "square");
+        videos.style.setProperty("--squash-ratio", shape.ratio);
         if (target) {
             const first = tiles[0] === target;
             videos.style.gridTemplateColumns = first
-                ? "minmax(0, 1fr) " + STRIP
-                : STRIP + " minmax(0, 1fr)";
+                ? "minmax(0, 1fr) " + shape.strip
+                : shape.strip + " minmax(0, 1fr)";
             videos.style.gridTemplateRows = "minmax(0, 1fr)";
         } else {
             videos.style.gridTemplateColumns = "";
