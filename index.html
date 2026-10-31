@@ -188,6 +188,20 @@
                         <path d="M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5"/>
                     </svg>
                 </button>
+                <!-- Sélecteur d'écran : dans le panneau pour rester visible en plein écran -->
+                <div id="screen-share-popup" class="popup hidden">
+                    <div class="popup-content" style="width:480px;">
+                        <h2>Partager ton écran</h2>
+                        <div id="screen-share-tabs">
+                            <button class="screen-tab active" data-tab="window">Applications</button>
+                            <button class="screen-tab" data-tab="screen">Écrans</button>
+                        </div>
+                        <div id="screen-sources-grid"></div>
+                        <div class="popup-buttons">
+                            <button id="cancel-screen-share" class="special-btn cancel">Annuler</button>
+                        </div>
+                    </div>
+                </div>
             </div>
 
         </div>
@@ -415,20 +429,6 @@
         <div class="popup-buttons">
             <button id="confirm-delete-account" class="special-btn cancel" style="background:#d9534f;">Supprimer définitivement</button>
             <button id="cancel-delete-account" class="special-btn">Annuler</button>
-        </div>
-    </div>
-</div>
-
-<div id="screen-share-popup" class="popup hidden">
-    <div class="popup-content" style="width:480px;">
-        <h2>Partager ton écran</h2>
-        <div id="screen-share-tabs">
-            <button class="screen-tab active" data-tab="window">Applications</button>
-            <button class="screen-tab" data-tab="screen">Écrans</button>
-        </div>
-        <div id="screen-sources-grid"></div>
-        <div class="popup-buttons">
-            <button id="cancel-screen-share" class="special-btn cancel">Annuler</button>
         </div>
     </div>
 </div>
