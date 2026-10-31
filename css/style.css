@@ -2345,3 +2345,11 @@ body.has-dev-banner #call-video-bubble {
     max-height: 100%;
     max-width: calc(100cqh * 16 / 9);
 }
+
+/* Espace entre les bulles */
+#call-panel #videos {
+    gap: 16px;
+}
+#call-panel:fullscreen #videos {
+    gap: 24px;
+}
