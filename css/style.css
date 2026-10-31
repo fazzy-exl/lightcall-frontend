@@ -2247,11 +2247,6 @@ body.has-dev-banner #call-video-bubble {
 #call-panel:fullscreen .fs-icon-expand,
 #call-panel:not(:fullscreen) .fs-icon-collapse { display: none; }
 
-/* Caché en plein écran seulement si tu ne partages pas (la fenêtre de choix d'écran n'apparaîtrait pas par-dessus) */
-#call-panel:fullscreen:not(.is-sharing) #shareBtn {
-    display: none !important;
-}
-
 /* =============================================
    BOUTONS D'APPEL — ICÔNES RONDES
 ============================================= */
